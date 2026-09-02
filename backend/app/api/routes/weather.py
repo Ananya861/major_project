@@ -12,8 +12,8 @@ router = APIRouter(prefix="/weather", tags=["weather"])
 
 @router.get("", response_model=WeatherOut)
 async def read_weather(
-    lat: float = Query(..., description="Latitude"),
-    lng: float = Query(..., description="Longitude"),
+    lat: float = Query(..., ge=-90, le=90, description="Latitude"),
+    lng: float = Query(..., ge=-180, le=180, description="Longitude"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     return await get_weather(lat, lng, db)
