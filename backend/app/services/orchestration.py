@@ -10,25 +10,16 @@ modules can replace these stubs later, e.g.:
 
 from datetime import date, timedelta
 
+from app.ml.crop_inference import recommend_crops
+
 
 def predict_crop(soil_data: dict) -> list[dict]:
     """
-    Rank crops for a farm given its latest soil reading.
-
-    PLACEHOLDER: replace this body with the real model import. Dummy values are
-    realistic enough for API/demo wiring (names match the Alembic seed crops).
+    Rank crops for a farm given its latest soil reading (and optional weather).
 
     Expected return: [{"crop": str, "confidence": float}, ...] sorted high → low.
     """
-    # Slightly vary dummy ranking using pH so the stub is not a constant.
-    ph = soil_data.get("ph") or 6.5
-    if ph < 6.0:
-        ranking = [("Rice", 0.78), ("Wheat", 0.14), ("Tomato", 0.08)]
-    elif ph > 7.5:
-        ranking = [("Wheat", 0.72), ("Onion", 0.18), ("Tomato", 0.10)]
-    else:
-        ranking = [("Tomato", 0.64), ("Onion", 0.22), ("Wheat", 0.14)]
-    return [{"crop": name, "confidence": score} for name, score in ranking]
+    return recommend_crops(soil_data, top_k=3)
 
 
 def predict_price(crop_id: int, market_id: int, days_ahead: int) -> list[dict]:

@@ -1,4 +1,4 @@
-"""Crop recommendation endpoint (uses the stubbed predict_crop)."""
+"""Crop recommendation endpoint (trained model via predict_crop)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -6,9 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_farmer
 from app.db.session import get_db
+from app.ml.crop_inference import CropModelNotAvailable
 from app.models import Crop, CropRecommendation, Farm, Farmer, SoilData
 from app.schemas.market import CropRecoItem, CropRecommendOut
 from app.services.orchestration import predict_crop
+from app.services.weather_service import get_weather
 
 router = APIRouter(prefix="/recommend", tags=["recommend"])
 
@@ -49,7 +51,27 @@ async def recommend_crop(
         "moisture": soil.moisture,
         "soil_type": soil.soil_type,
     }
-    ranked = predict_crop(soil_payload)
+    try:
+        weather = await get_weather(farm.latitude, farm.longitude, db)
+        soil_payload["temperature"] = weather.get("temp")
+        soil_payload["humidity"] = weather.get("humidity")
+        soil_payload["rainfall"] = weather.get("rainfall")
+    except HTTPException:
+        # Weather is optional for inference; the fitted imputer fills missing climate fields.
+        pass
+
+    try:
+        ranked = predict_crop(soil_payload)
+    except CropModelNotAvailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
     items: list[CropRecoItem] = []
     for entry in ranked:
@@ -59,7 +81,7 @@ async def recommend_crop(
             await db.execute(select(Crop).where(func.lower(Crop.name) == crop_name.lower()))
         ).scalar_one_or_none()
         if crop is None:
-            # Still return the stub name so the API is usable before seed/ML swap-in.
+            # Crop is outside the seeded crop table; still return the model label.
             items.append(CropRecoItem(crop_id=None, crop=crop_name, confidence=confidence))
             continue
         db.add(
