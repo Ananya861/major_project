@@ -1,5 +1,7 @@
 """Farm and soil endpoints. All farms belong to the logged-in farmer."""
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,7 +90,11 @@ async def add_soil_reading(
     db: AsyncSession = Depends(get_db),
 ) -> SoilData:
     farm = await _owned_farm(farm_id, farmer, db)
-    reading = SoilData(farm_id=farm.farm_id, **payload.model_dump())
+    reading = SoilData(
+        farm_id=farm.farm_id,
+        recorded_at=datetime.now(timezone.utc),
+        **payload.model_dump(),
+    )
     db.add(reading)
     await db.commit()
     await db.refresh(reading)
