@@ -48,3 +48,20 @@ class CropRecoItem(BaseModel):
 class CropRecommendOut(BaseModel):
     farm_id: int
     recommendations: list[CropRecoItem]
+
+
+class CropOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    crop_id: int
+    name: str
+    season: str | None
+
+
+class MarketOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    market_id: int
+    name: str
+    state: str | None
+    district: str | None

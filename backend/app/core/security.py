@@ -10,7 +10,11 @@ from app.core.config import settings
 
 def hash_password(plain_password: str) -> str:
     """Hash a plaintext password with bcrypt. Returns a utf-8 string for storage."""
-    hashed = bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt())
+    # bcrypt only uses the first 72 bytes; reject longer secrets instead of truncating.
+    password_bytes = plain_password.encode("utf-8")
+    if len(password_bytes) > 72:
+        raise ValueError("Password must be at most 72 bytes")
+    hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     return hashed.decode("utf-8")
 
 

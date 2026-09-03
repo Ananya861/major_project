@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_farmer
 from app.db.session import get_db
 from app.models import Farmer, Notification
-from app.schemas.notification import NotificationOut
+from app.schemas.notification import AlertCheckOut, NotificationOut
+from app.services.alerts import check_price_alerts, check_weather_alerts
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -23,6 +24,23 @@ async def list_notifications(
         .order_by(Notification.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+@router.post(
+    "/check-alerts",
+    response_model=AlertCheckOut,
+    summary="Run price and weather alert checks (demo; use cron/APScheduler in production)",
+)
+async def run_alert_checks(
+    _farmer: Farmer = Depends(get_current_farmer),
+    db: AsyncSession = Depends(get_db),
+) -> AlertCheckOut:
+    price_created = await check_price_alerts(db)
+    weather_created = await check_weather_alerts(db)
+    return AlertCheckOut(
+        price_alerts_created=price_created,
+        weather_alerts_created=weather_created,
+    )
 
 
 @router.patch("/{notif_id}/read", response_model=NotificationOut)

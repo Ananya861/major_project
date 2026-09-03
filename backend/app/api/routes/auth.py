@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_farmer
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models import Farmer
@@ -21,10 +22,18 @@ async def register(payload: FarmerRegister, db: AsyncSession = Depends(get_db)) 
             detail="A farmer with this phone number already exists",
         )
 
+    try:
+        password_hash = hash_password(payload.password)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is too long",
+        )
+
     farmer = Farmer(
         name=payload.name,
         phone=payload.phone,
-        password_hash=hash_password(payload.password),
+        password_hash=password_hash,
         state=payload.state,
         district=payload.district,
         village=payload.village,
@@ -49,3 +58,8 @@ async def login(payload: FarmerLogin, db: AsyncSession = Depends(get_db)) -> Tok
         )
     token = create_access_token(farmer.farmer_id)
     return TokenResponse(access_token=token)
+
+
+@router.get("/me", response_model=FarmerOut)
+async def read_me(farmer: Farmer = Depends(get_current_farmer)) -> Farmer:
+    return farmer

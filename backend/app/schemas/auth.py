@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class FarmerRegister(BaseModel):
     name: str = Field(min_length=1, max_length=150)
     phone: str = Field(min_length=8, max_length=20)
-    password: str = Field(min_length=6, max_length=128)
+    password: str = Field(min_length=6, max_length=72)
     state: str | None = None
     district: str | None = None
     village: str | None = None

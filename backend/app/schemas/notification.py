@@ -14,3 +14,8 @@ class NotificationOut(BaseModel):
     message: str
     is_read: bool
     created_at: datetime
+
+
+class AlertCheckOut(BaseModel):
+    price_alerts_created: int
+    weather_alerts_created: int

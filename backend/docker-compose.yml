@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: farmer_advisory_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: farmer_advisory
+    ports:
+      - "5432:5432"
+    volumes:
+      - farmer_advisory_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d farmer_advisory"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  farmer_advisory_pgdata:

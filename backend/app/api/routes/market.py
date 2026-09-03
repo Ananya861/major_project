@@ -1,6 +1,6 @@
-"""Mandi prices (cached) and stubbed price forecasts."""
+"""Mandi prices (cached) and price forecasts via the ML adapter."""
 
-from datetime import date, datetime, timezone
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_farmer
 from app.db.session import get_db
-from app.models import Crop, Farmer, Market, MarketPrice, PricePrediction
+from app.models import Crop, Farmer, Market, MarketPrice
 from app.schemas.market import MarketPriceOut, PriceForecastItem, PricePredictionOut
 from app.services.mandi_service import get_mandi_prices
-from app.services.orchestration import predict_price
+from app.services.orchestration import get_price_predictions
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -77,43 +77,11 @@ async def predict_market_price(
     _farmer: Farmer = Depends(get_current_farmer),
     db: AsyncSession = Depends(get_db),
 ) -> PricePredictionOut:
-    crop = (
-        await db.execute(select(Crop).where(Crop.crop_id == crop_id))
-    ).scalar_one_or_none()
-    market = (
-        await db.execute(select(Market).where(Market.market_id == market_id))
-    ).scalar_one_or_none()
-    if crop is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crop not found")
-    if market is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Market not found")
-
-    forecast = predict_price(crop_id, market_id, days_ahead)
-    now = datetime.now(timezone.utc)
-    items: list[PriceForecastItem] = []
-    for entry in forecast:
-        predicted_day = date.fromisoformat(entry["date"])
-        db.add(
-            PricePrediction(
-                crop_id=crop_id,
-                market_id=market_id,
-                predicted_date=datetime(
-                    predicted_day.year,
-                    predicted_day.month,
-                    predicted_day.day,
-                    tzinfo=timezone.utc,
-                ),
-                predicted_price=float(entry["predicted_price"]),
-                generated_at=now,
-            )
-        )
-        items.append(
-            PriceForecastItem(
-                date=entry["date"],
-                predicted_price=float(entry["predicted_price"]),
-            )
-        )
-    await db.commit()
+    payload = await get_price_predictions(crop_id, market_id, days_ahead, db)
+    items = [
+        PriceForecastItem(date=entry["date"], predicted_price=float(entry["predicted_price"]))
+        for entry in payload["predictions"]
+    ]
     return PricePredictionOut(
         crop_id=crop_id,
         market_id=market_id,

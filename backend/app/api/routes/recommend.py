@@ -1,16 +1,28 @@
-"""Crop recommendation endpoint (uses the stubbed predict_crop)."""
+"""Crop recommendation and price-prediction endpoints (JWT). Existing /crop is kept."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_farmer
 from app.db.session import get_db
-from app.models import Crop, CropRecommendation, Farm, Farmer, SoilData
+from app.models import Farm, Farmer
 from app.schemas.market import CropRecoItem, CropRecommendOut
-from app.services.orchestration import predict_crop
+from app.schemas.recommend import CropRecommendationResponse, PricePredictionResponse
+from app.services.orchestration import get_crop_recommendations, get_price_predictions
 
 router = APIRouter(prefix="/recommend", tags=["recommend"])
+
+
+async def _owned_farm(farm_id: int, farmer: Farmer, db: AsyncSession) -> Farm:
+    farm = (
+        await db.execute(
+            select(Farm).where(Farm.farm_id == farm_id, Farm.farmer_id == farmer.farmer_id)
+        )
+    ).scalar_one_or_none()
+    if farm is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Farm not found")
+    return farm
 
 
 @router.get("/crop", response_model=CropRecommendOut)
@@ -19,60 +31,41 @@ async def recommend_crop(
     farmer: Farmer = Depends(get_current_farmer),
     db: AsyncSession = Depends(get_db),
 ) -> CropRecommendOut:
-    farm = (
-        await db.execute(
-            select(Farm).where(Farm.farm_id == farm_id, Farm.farmer_id == farmer.farmer_id)
-        )
-    ).scalar_one_or_none()
-    if farm is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Farm not found")
+    await _owned_farm(farm_id, farmer, db)
+    payload = await get_crop_recommendations(farm_id, db)
+    return CropRecommendOut(
+        farm_id=payload["farm_id"],
+        recommendations=[CropRecoItem(**item) for item in payload["recommendations"]],
+    )
 
-    soil = (
-        await db.execute(
-            select(SoilData)
-            .where(SoilData.farm_id == farm.farm_id)
-            .order_by(SoilData.recorded_at.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-    if soil is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Add a soil reading for this farm before requesting a recommendation",
-        )
 
-    soil_payload = {
-        "ph": soil.ph,
-        "nitrogen": soil.nitrogen,
-        "phosphorus": soil.phosphorus,
-        "potassium": soil.potassium,
-        "moisture": soil.moisture,
-        "soil_type": soil.soil_type,
-    }
-    ranked = predict_crop(soil_payload)
+@router.get("/crops/{farm_id}", response_model=CropRecommendationResponse)
+async def recommend_crops_for_farm(
+    farm_id: int,
+    farmer: Farmer = Depends(get_current_farmer),
+    db: AsyncSession = Depends(get_db),
+) -> CropRecommendationResponse:
+    await _owned_farm(farm_id, farmer, db)
+    payload = await get_crop_recommendations(farm_id, db)
+    return CropRecommendationResponse(
+        farm_id=payload["farm_id"],
+        recommendations=[CropRecoItem(**item) for item in payload["recommendations"]],
+        generated_at=payload["generated_at"],
+    )
 
-    items: list[CropRecoItem] = []
-    for entry in ranked:
-        crop_name = str(entry.get("crop", "")).strip()
-        confidence = float(entry.get("confidence", 0))
-        crop = (
-            await db.execute(select(Crop).where(func.lower(Crop.name) == crop_name.lower()))
-        ).scalar_one_or_none()
-        if crop is None:
-            # Still return the stub name so the API is usable before seed/ML swap-in.
-            items.append(CropRecoItem(crop_id=None, crop=crop_name, confidence=confidence))
-            continue
-        db.add(
-            CropRecommendation(
-                farm_id=farm.farm_id,
-                crop_id=crop.crop_id,
-                confidence_score=confidence,
-            )
-        )
-        items.append(
-            CropRecoItem(crop_id=crop.crop_id, crop=crop.name, confidence=confidence)
-        )
 
-    await db.commit()
-    items.sort(key=lambda x: x.confidence, reverse=True)
-    return CropRecommendOut(farm_id=farm.farm_id, recommendations=items)
+@router.get("/prices", response_model=PricePredictionResponse)
+async def recommend_prices(
+    crop_id: int = Query(..., ge=1),
+    market_id: int = Query(..., ge=1),
+    days_ahead: int = Query(7, ge=1, le=30),
+    _farmer: Farmer = Depends(get_current_farmer),
+    db: AsyncSession = Depends(get_db),
+) -> PricePredictionResponse:
+    payload = await get_price_predictions(crop_id, market_id, days_ahead, db)
+    return PricePredictionResponse(
+        crop_id=payload["crop_id"],
+        market_id=payload["market_id"],
+        predictions=payload["predictions"],
+        generated_at=payload["generated_at"],
+    )
