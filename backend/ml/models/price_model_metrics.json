@@ -1,0 +1,22 @@
+{
+    "model": "GradientBoostingRegressor",
+    "total_records": 11362,
+    "training_records": 9089,
+    "testing_records": 2273,
+    "mae": 93.66954909662397,
+    "rmse": 169.88559290707462,
+    "r2": 0.9760373569019983,
+    "features": [
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "rolling_mean_3",
+        "month",
+        "day",
+        "day_of_week"
+    ],
+    "training_start_date": "2002-10-12",
+    "training_end_date": "2022-05-26",
+    "testing_start_date": "2022-05-26",
+    "testing_end_date": "2025-11-04"
+}
