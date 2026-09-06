@@ -151,14 +151,38 @@ async def _get_weather_with_db(lat: float, lng: float, db: AsyncSession) -> dict
 
 
 async def get_weather(lat: float, lng: float, db: AsyncSession | None = None) -> dict:
-    """Return current weather for lat/lng, using weather_log if newer than 3 hours."""
+    """
+    Return current weather for lat/lng.
+
+    Uses PostgreSQL cache when available. If the database is unavailable,
+    fetches directly from OpenWeatherMap so the live weather service
+    can continue working.
+    """
     _validate_coords(lat, lng)
+
     if db is not None:
         return await _get_weather_with_db(lat, lng, db)
 
-    async with AsyncSessionLocal() as session:
-        try:
+    try:
+        async with AsyncSessionLocal() as session:
             return await _get_weather_with_db(lat, lng, session)
-        except Exception:
-            await session.rollback()
-            raise
+
+    except Exception:
+        # Database unavailable: fall back to direct live API request.
+        lat_r = round_coord(lat)
+        lng_r = round_coord(lng)
+
+        current, forecast_payload = await _fetch_from_openweather(lat_r, lng_r)
+
+        main = current.get("main") or {}
+
+        return {
+            "latitude": lat_r,
+            "longitude": lng_r,
+            "date": datetime.now(timezone.utc),
+            "temp": main.get("temp"),
+            "rainfall": _extract_rainfall(current),
+            "humidity": main.get("humidity"),
+            "forecast": _short_forecast(forecast_payload),
+            "cached": False,
+        }

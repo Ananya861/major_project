@@ -32,9 +32,21 @@ async def health() -> dict:
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    print("\n========== INTERNAL ERROR ==========")
+    print(type(exc).__name__)
+    print(str(exc))
+    print("====================================\n")
+
     if isinstance(exc, HTTPException):
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
+
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
+        content={
+            "detail": str(exc),
+            "error_type": type(exc).__name__
+        },
     )
