@@ -5,8 +5,8 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.market import MarketPrice
-from app.models.notification import Notification
-from app.models.market import MarketPrice, PricePrediction
+from app.models.notification import Notification, NotificationType
+from app.models.market import Crop, MarketPrice, PricePrediction
 
 
 MSP_PRICES = {
@@ -38,12 +38,12 @@ async def _has_unread_today(
     return result.scalar_one_or_none() is not None
 
 
-async def check_price_alerts(db: AsyncSession):
+async def check_price_alerts(db: AsyncSession, farmer_id: int):
     """Create alerts when forecasts differ significantly from current prices/MSP."""
 
     result = await db.execute(
         select(PricePrediction)
-        .order_by(desc(PricePrediction.date))
+        .order_by(desc(PricePrediction.predicted_date))
     )
     predictions = result.scalars().all()
 
@@ -77,15 +77,14 @@ async def check_price_alerts(db: AsyncSession):
             if abs(change_percent) >= 10:
                 if not await _has_unread_today(
                     db,
-                    prediction.farmer_id,
-                    "PRICE_ALERT",
+                    farmer_id,
+                    NotificationType.PRICE_ALERT,
                 ):
                     direction = "increase" if change_percent > 0 else "decrease"
 
                     notification = Notification(
-                        farmer_id=prediction.farmer_id,
-                        type="PRICE_ALERT",
-                        title="Market Price Forecast Alert",
+                        farmer_id=farmer_id,
+                        type=NotificationType.PRICE_ALERT,
                         message=(
                             f"Expected price {direction} of "
                             f"{abs(change_percent):.1f}% for the selected crop "
@@ -112,10 +111,9 @@ async def check_price_alerts(db: AsyncSession):
         if crop_price is None:
             continue
 
-        # Crop name is obtained from the relationship if available.
-        crop_name = None
-        if hasattr(crop_price, "crop") and crop_price.crop:
-            crop_name = crop_price.crop.name
+        crop_result = await db.execute(select(Crop).where(Crop.crop_id == prediction.crop_id).limit(1))
+        crop = crop_result.scalar_one_or_none()
+        crop_name = crop.name if crop else None
 
         msp = MSP_PRICES.get(crop_name)
 
@@ -127,15 +125,14 @@ async def check_price_alerts(db: AsyncSession):
         if abs(msp_difference_percent) >= 5:
             if not await _has_unread_today(
                 db,
-                prediction.farmer_id,
-                "MSP_ALERT",
+                farmer_id,
+                NotificationType.PRICE_ALERT,
             ):
                 direction = "above" if msp_difference_percent > 0 else "below"
 
                 notification = Notification(
-                    farmer_id=prediction.farmer_id,
-                    type="MSP_ALERT",
-                    title="MSP Comparison Alert",
+                    farmer_id=farmer_id,
+                    type=NotificationType.PRICE_ALERT,
                     message=(
                         f"Forecast price is {abs(msp_difference_percent):.1f}% "
                         f"{direction} the MSP of ₹{msp:.0f}/quintal."
@@ -180,7 +177,7 @@ async def check_market_price_updates(
     if await _has_unread_today(
         db,
         farmer_id,
-        "MARKET_PRICE_UPDATE",
+        NotificationType.PRICE_ALERT,
     ):
         return False
 
@@ -188,8 +185,7 @@ async def check_market_price_updates(
 
     notification = Notification(
         farmer_id=farmer_id,
-        type="MARKET_PRICE_UPDATE",
-        title="Market Price Updated",
+        type=NotificationType.PRICE_ALERT,
         message=(
             f"Latest mandi modal price {direction} by "
             f"{abs(change_percent):.1f}%."
@@ -213,3 +209,7 @@ async def check_weather_alerts(db: AsyncSession):
     duplicate alerts.
     """
     return 0
+
+
+
+
