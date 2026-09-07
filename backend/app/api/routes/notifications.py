@@ -35,7 +35,7 @@ async def run_alert_checks(
     _farmer: Farmer = Depends(get_current_farmer),
     db: AsyncSession = Depends(get_db),
 ) -> AlertCheckOut:
-    price_created = await check_price_alerts(db)
+    price_created = await check_price_alerts(db, _farmer.farmer_id)
     weather_created = await check_weather_alerts(db)
     return AlertCheckOut(
         price_alerts_created=price_created,
@@ -64,3 +64,4 @@ async def mark_notification_read(
     await db.commit()
     await db.refresh(notif)
     return notif
+

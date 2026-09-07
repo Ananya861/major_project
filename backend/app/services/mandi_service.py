@@ -1,7 +1,10 @@
 """Agmarknet (data.gov.in) mandi price client."""
 
+import json
+import subprocess
 from datetime import date, datetime
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import HTTPException, status
@@ -38,60 +41,111 @@ def _parse_arrival_date(raw: str | None) -> date:
     """Agmarknet typically uses DD/MM/YYYY; fall back to today if parsing fails."""
     if not raw:
         return date.today()
+
     for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
         try:
             return datetime.strptime(raw.strip(), fmt).date()
         except ValueError:
             continue
+
     return date.today()
 
 
-async def get_mandi_prices(crop_name: str, market_name: str | None = None) -> list[dict]:
-    """Fetch min/max/modal prices from Agmarknet. Returns a list of dicts."""
-    api_key = settings.DATA_GOV_API_KEY.strip().strip("\"'")
+async def get_mandi_prices(
+    crop_name: str,
+    market_name: str | None = None,
+    state_name: str | None = None,
+    district_name: str | None = None,
+) -> list[dict]:
+    """Fetch current daily mandi prices from the official data.gov.in Agmarknet API."""
+    raw_api_key = settings.DATA_GOV_API_KEY or ""
+    api_key = raw_api_key.strip().strip("\"'")
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="DATA_GOV_API_KEY is not configured",
         )
 
-    params: dict[str, Any] = {
-        "api-key": api_key,
-        "format": "json",
-        "limit": 20,
-        "filters[commodity]": crop_name,
-    }
+    params: list[tuple[str, str]] = [
+        ("api-key", api_key),
+        ("format", "json"),
+        ("limit", "20"),
+        ("filters[commodity]", crop_name),
+    ]
+
     if market_name:
-        params["filters[market]"] = market_name
+        params.append(("filters[market]", market_name))
+
+    if state_name:
+        params.append(("filters[state]", state_name))
+
+    if district_name:
+        params.append(("filters[district]", district_name))
 
     timeout_config = httpx.Timeout(10.0, connect=5.0)
+    payload: Any = None
 
+    # Primary attempt: asynchronous HTTP request via httpx
     try:
         async with httpx.AsyncClient(timeout=timeout_config, headers=DEFAULT_HEADERS) as client:
             response = await client.get(AGMARKNET_URL, params=params)
+            if response.status_code in (401, 403):
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Invalid or unauthorized DATA_GOV_API_KEY for data.gov.in",
+                )
             response.raise_for_status()
             payload = response.json()
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code in (401, 403):
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Invalid or unauthorized DATA_GOV_API_KEY for data.gov.in",
-            ) from exc
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"data.gov.in error: {exc.response.status_code}",
-        ) from exc
+    except HTTPException:
+        raise
     except (httpx.ConnectTimeout, httpx.ReadTimeout) as exc:
+        # Gateway timeout fallback
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail="Connection to data.gov.in timed out",
         ) from exc
-    except httpx.HTTPError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Could not reach data.gov.in",
-        ) from exc
-
+    except (httpx.HTTPError, Exception):
+        # Fallback attempt via curl.exe (handles Windows TLS / WAF differences when needed)
+        try:
+            query_string = urlencode(params)
+            url = f"{AGMARKNET_URL}?{query_string}"
+            completed = subprocess.run(
+                [
+                    "curl.exe",
+                    "-s",
+                    "--max-time",
+                    "15",
+                    "-H",
+                    f"User-Agent: {DEFAULT_HEADERS['User-Agent']}",
+                    "-H",
+                    f"Accept: {DEFAULT_HEADERS['Accept']}",
+                    url,
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            if completed.returncode == 0 and completed.stdout.strip():
+                payload = json.loads(completed.stdout)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Could not reach data.gov.in",
+                )
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Invalid response received from data.gov.in",
+            ) from exc
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Connection to data.gov.in failed: {exc}",
+            ) from exc
 
     if isinstance(payload, dict) and payload.get("status") in ("failed", "error"):
         error_msg = payload.get("message") or "data.gov.in returned an error status"
@@ -100,19 +154,25 @@ async def get_mandi_prices(crop_name: str, market_name: str | None = None) -> li
             detail=f"data.gov.in error: {error_msg}",
         )
 
-    records = payload.get("records") or []
+    records = payload.get("records") if isinstance(payload, dict) else []
+    if not records:
+        return []
+
     results: list[dict] = []
     for rec in records:
         results.append(
             {
                 "crop": rec.get("commodity") or crop_name,
                 "market": rec.get("market") or market_name,
-                "state": rec.get("state"),
-                "district": rec.get("district"),
+                "state": rec.get("state") or state_name,
+                "district": rec.get("district") or district_name,
+                "variety": rec.get("variety"),
+                "grade": rec.get("grade"),
                 "date": _parse_arrival_date(rec.get("arrival_date")),
                 "min_price": _to_float(rec.get("min_price")),
                 "max_price": _to_float(rec.get("max_price")),
                 "modal_price": _to_float(rec.get("modal_price")),
             }
         )
+
     return results

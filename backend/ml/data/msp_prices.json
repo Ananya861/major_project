@@ -1,0 +1,26 @@
+﻿[
+    {
+        "commodity": "Wheat",
+        "season": "Rabi",
+        "marketing_year": "2026-27",
+        "msp_per_quintal": 2585
+    },
+    {
+        "commodity": "Maize",
+        "season": "Kharif",
+        "marketing_year": "2026-27",
+        "msp_per_quintal": 2410
+    },
+    {
+        "commodity": "Groundnut",
+        "season": "Kharif",
+        "marketing_year": "2026-27",
+        "msp_per_quintal": 7517
+    },
+    {
+        "commodity": "Soyabean",
+        "season": "Kharif",
+        "marketing_year": "2026-27",
+        "msp_per_quintal": 5708
+    }
+]

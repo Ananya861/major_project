@@ -8,3 +8,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 *.db
+
+# Member 2 raw downloaded mandi data
+backend/ml/data/pan_india/
+

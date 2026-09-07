@@ -1,130 +1,148 @@
-"""
-Member 2 - Mandi price prediction adapter.
-
-Loads the trained Gradient Boosting model and converts the
-historical market-price data supplied by the backend into the
-same features used during training.
-"""
-
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
 import joblib
 import pandas as pd
 
-from app.services.model_adapters.exceptions import ModelNotIntegratedError
-
-
-# --------------------------------------------------
-# Model path
-# --------------------------------------------------
-
-CURRENT_FILE = Path(__file__).resolve()
-
-# backend/app/services/model_adapters/
-#        -> backend/
-BACKEND_DIR = CURRENT_FILE.parents[3]
 
 MODEL_PATH = (
-    BACKEND_DIR
+    Path(__file__).resolve().parents[3]
     / "ml"
     / "models"
     / "price_model.joblib"
 )
 
-
-# --------------------------------------------------
-# Load model once
-# --------------------------------------------------
-
-_model_package = None
+_model_bundle = None
 
 
-def _load_model():
-    """Load the trained Member 2 model."""
+def _load_model_bundle():
+    global _model_bundle
 
-    global _model_package
-
-    if _model_package is None:
-
+    if _model_bundle is None:
         if not MODEL_PATH.exists():
-            raise ModelNotIntegratedError(
-                f"Price model not found at: {MODEL_PATH}"
+            raise FileNotFoundError(
+                f"Price model not found: {MODEL_PATH}"
             )
 
-        _model_package = joblib.load(MODEL_PATH)
+        _model_bundle = joblib.load(MODEL_PATH)
 
-    return _model_package
-
-
-# --------------------------------------------------
-# Date helper
-# --------------------------------------------------
-
-def _parse_date(value: Any) -> date:
-    """Convert a date-like value to a Python date."""
-
-    if isinstance(value, datetime):
-        return value.date()
-
-    if isinstance(value, date):
-        return value
-
-    return pd.to_datetime(value).date()
+    return _model_bundle
 
 
-# --------------------------------------------------
-# Feature creation
-# --------------------------------------------------
+def _build_history_dataframe(
+    historical_data: list[dict[str, Any]],
+) -> pd.DataFrame:
+    df = pd.DataFrame(historical_data)
 
-def _create_features(
-    prices: list[float],
-    forecast_date: date,
-) -> dict[str, float]:
-    """
-    Create exactly the features used by the training script.
+    if df.empty:
+        raise ValueError("Historical price data is empty")
 
-    The model uses:
-        lag_1
-        lag_2
-        lag_3
-        rolling_mean_3
-        month
-        day
-        day_of_week
-    """
+    df["date"] = pd.to_datetime(
+        df["date"],
+        errors="coerce",
+    )
 
-    if len(prices) < 3:
-        raise ModelNotIntegratedError(
-            "At least 3 historical prices are required "
-            "for price prediction."
+    df["modal_price"] = pd.to_numeric(
+        df["modal_price"],
+        errors="coerce",
+    )
+
+    df = df.dropna(
+        subset=["date", "modal_price"]
+    )
+
+    df = df.sort_values("date").reset_index(drop=True)
+
+    if len(df) < 3:
+        raise ValueError(
+            "At least 3 historical price records are required"
         )
 
-    lag_1 = prices[-1]
-    lag_2 = prices[-2]
-    lag_3 = prices[-3]
+    return df
+
+
+def _get_market_metadata(
+    crop_id: int,
+    market_id: int,
+) -> tuple[str, str, str, str]:
+    """
+    Maps the existing application crop/market IDs to the
+    categorical values used by the Pan-India model.
+
+    The IDs below are the existing project database mappings.
+    """
+
+    crop_mapping = {
+        1: "Wheat",
+        16: "Maize",
+        28: "Soyabean",
+        29: "Groundnut",
+    }
+
+    market_mapping = {
+        7: ("Biaora", "Madhya Pradesh", "Rajgarh"),
+        8: ("Khilchipur", "Madhya Pradesh", "Rajgarh"),
+        9: ("Jaspur", "Chattisgarh", "Jashpur"),
+        10: ("Sendhwa", "Madhya Pradesh", "Badwani"),
+    }
+
+    commodity = crop_mapping.get(crop_id)
+
+    if commodity is None:
+        raise ValueError(
+            f"Unsupported crop_id for price model: {crop_id}"
+        )
+
+    market_info = market_mapping.get(market_id)
+
+    if market_info is None:
+        raise ValueError(
+            f"Unsupported market_id for price model: {market_id}"
+        )
+
+    market, state, district = market_info
+
+    return commodity, state, district, market
+
+
+def _create_feature_row(
+    commodity: str,
+    state: str,
+    district: str,
+    market: str,
+    prediction_date,
+    working_prices: list[float],
+) -> pd.DataFrame:
+
+    lag_1 = working_prices[-1]
+    lag_2 = working_prices[-2]
+    lag_3 = working_prices[-3]
 
     rolling_mean_3 = (
         lag_1 + lag_2 + lag_3
     ) / 3.0
 
-    return {
-        "lag_1": float(lag_1),
-        "lag_2": float(lag_2),
-        "lag_3": float(lag_3),
-        "rolling_mean_3": float(rolling_mean_3),
-        "month": float(forecast_date.month),
-        "day": float(forecast_date.day),
-        "day_of_week": float(forecast_date.weekday()),
-    }
+    return pd.DataFrame(
+        [
+            {
+                "lag_1": lag_1,
+                "lag_2": lag_2,
+                "lag_3": lag_3,
+                "rolling_mean_3": rolling_mean_3,
+                "month": prediction_date.month,
+                "day": prediction_date.day,
+                "day_of_week": prediction_date.weekday(),
+                "Commodity": commodity,
+                "State": state,
+                "District": district,
+                "Market": market,
+            }
+        ]
+    )
 
-
-# --------------------------------------------------
-# Main prediction function
-# --------------------------------------------------
 
 async def predict_price(
     crop_id: int,
@@ -132,117 +150,65 @@ async def predict_price(
     days_ahead: int,
     historical_data: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """
-    Predict mandi prices for the requested number of future days.
 
-    Parameters
-    ----------
-    crop_id:
-        Backend crop ID.
-
-    market_id:
-        Backend market ID.
-
-    days_ahead:
-        Number of future days to predict.
-
-    historical_data:
-        Chronological historical market prices supplied by the
-        existing backend orchestration layer.
-
-    Returns
-    -------
-    list[dict[str, Any]]
-        Example:
-        [
-            {
-                "date": "2026-09-06",
-                "predicted_price": 4500.25
-            }
-        ]
-    """
-
-    # These IDs are part of the existing backend contract.
-    # The current global model is trained using price-history
-    # features rather than crop_id/market_id.
-    _ = (crop_id, market_id)
-
-    if days_ahead < 1 or days_ahead > 30:
+    if not 1 <= days_ahead <= 30:
         raise ValueError(
-            "days_ahead must be between 1 and 30."
+            "days_ahead must be between 1 and 30"
         )
 
     if len(historical_data) < 3:
-        raise ModelNotIntegratedError(
-            "At least 3 historical market prices are required "
-            "for price prediction."
+        raise ValueError(
+            "At least 3 historical records are required"
         )
 
-    package = _load_model()
+    bundle = _load_model_bundle()
 
-    model = package["model"]
-    feature_columns = package["features"]
+    model = bundle["model"]
+    preprocessor = bundle["preprocessor"]
 
-    # --------------------------------------------------
-    # Prepare historical prices
-    # --------------------------------------------------
-
-    history = []
-
-    for item in historical_data:
-
-        if "date" not in item:
-            raise ModelNotIntegratedError(
-                "Historical price record is missing 'date'."
-            )
-
-        if "modal_price" not in item:
-            raise ModelNotIntegratedError(
-                "Historical price record is missing 'modal_price'."
-            )
-
-        history.append(
-            {
-                "date": _parse_date(item["date"]),
-                "modal_price": float(item["modal_price"]),
-            }
+    commodity, state, district, market = (
+        _get_market_metadata(
+            crop_id,
+            market_id,
         )
+    )
 
-    # Sort chronologically
-    history.sort(key=lambda item: item["date"])
+    df = _build_history_dataframe(
+        historical_data
+    )
 
-    prices = [
-        item["modal_price"]
-        for item in history
-    ]
+    latest_date = df["date"].max().date()
 
-    last_date = history[-1]["date"]
+    working_prices = list(
+        df["modal_price"].astype(float)
+    )
 
     predictions = []
 
-    # --------------------------------------------------
-    # Recursive forecasting
-    # --------------------------------------------------
-
     for step in range(1, days_ahead + 1):
 
-        forecast_date = last_date + timedelta(days=step)
-
-        features = _create_features(
-            prices=prices,
-            forecast_date=forecast_date,
+        prediction_date = (
+            latest_date
+            + timedelta(days=step)
         )
 
-        X = pd.DataFrame(
-            [features],
-            columns=feature_columns,
+        feature_row = _create_feature_row(
+            commodity=commodity,
+            state=state,
+            district=district,
+            market=market,
+            prediction_date=prediction_date,
+            working_prices=working_prices,
+        )
+
+        encoded_features = preprocessor.transform(
+            feature_row
         )
 
         predicted_price = float(
-            model.predict(X)[0]
+            model.predict(encoded_features)[0]
         )
 
-        # A market price cannot be negative.
         predicted_price = max(
             0.0,
             predicted_price,
@@ -250,7 +216,7 @@ async def predict_price(
 
         predictions.append(
             {
-                "date": forecast_date.isoformat(),
+                "date": prediction_date.isoformat(),
                 "predicted_price": round(
                     predicted_price,
                     2,
@@ -258,7 +224,8 @@ async def predict_price(
             }
         )
 
-        # Feed prediction into the next forecast.
-        prices.append(predicted_price)
+        working_prices.append(
+            predicted_price
+        )
 
     return predictions

@@ -1,22 +1,13 @@
 {
-    "model": "GradientBoostingRegressor",
-    "total_records": 11362,
-    "training_records": 9089,
-    "testing_records": 2273,
-    "mae": 93.66954909662387,
-    "rmse": 169.90808744105036,
-    "r2": 0.9760310106996343,
-    "features": [
-        "lag_1",
-        "lag_2",
-        "lag_3",
-        "rolling_mean_3",
-        "month",
-        "day",
-        "day_of_week"
-    ],
-    "training_start_date": "2002-10-12",
-    "training_end_date": "2022-05-26",
-    "testing_start_date": "2022-05-26",
-    "testing_end_date": "2025-11-04"
+  "model_type": "HistGradientBoostingRegressor",
+  "records": 311736,
+  "training_rows": 249388,
+  "testing_rows": 62348,
+  "training_start": "2006-01-29",
+  "training_end": "2026-06-21",
+  "testing_start": "2026-06-21",
+  "testing_end": "2026-09-06",
+  "mae": 136.07195653627858,
+  "rmse": 342.4239692141505,
+  "r2": 0.9613594235061339
 }
