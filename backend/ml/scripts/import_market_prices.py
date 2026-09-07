@@ -1,6 +1,18 @@
 import asyncio
 import json
+import sys
 from datetime import datetime
+from pathlib import Path
+
+# Anchor paths relative to this script file
+SCRIPT_DIR = Path(__file__).resolve().parent
+ML_DIR = SCRIPT_DIR.parent
+BACKEND_DIR = ML_DIR.parent
+DATA_DIR = ML_DIR / "data"
+
+# Ensure backend directory is in sys.path
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from sqlalchemy import select
 from app.db.session import AsyncSessionLocal
@@ -48,7 +60,8 @@ async def main():
                 db.add(market)
                 await db.flush()
 
-            with open(f"ml/data/{filename}", "r", encoding="utf-8-sig") as f:
+            file_path = DATA_DIR / filename
+            with open(file_path, "r", encoding="utf-8-sig") as f:
                 records = json.load(f)
 
             # Keep only one record per date.
@@ -122,4 +135,5 @@ async def main():
         await db.commit()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -21,7 +21,7 @@ async def read_market_prices(
     crop_id: int = Query(...),
     market_id: int = Query(...),
     db: AsyncSession = Depends(get_db),
-) -> list[MarketPrice]:
+) -> list[MarketPriceOut]:
     crop = (
         await db.execute(select(Crop).where(Crop.crop_id == crop_id))
     ).scalar_one_or_none()
@@ -44,29 +44,67 @@ async def read_market_prices(
         )
     ).scalar_one_or_none()
     if cached is not None:
-        return [cached]
+        out = MarketPriceOut.model_validate(cached)
+        out.cached = True
+        return [out]
 
-    records = await get_mandi_prices(crop.name, market.name)
-    if not records:
+    # Attempt to fetch live arrival records from data.gov.in
+    live_records: list[dict] = []
+    fetch_error: HTTPException | None = None
+    try:
+        live_records = await get_mandi_prices(crop.name, market.name)
+    except HTTPException as exc:
+        fetch_error = exc
+
+    if live_records:
+        chosen = next((r for r in live_records if r.get("date") == today), live_records[0])
+        row = MarketPrice(
+            crop_id=crop_id,
+            market_id=market_id,
+            date=today,
+            min_price=chosen.get("min_price"),
+            max_price=chosen.get("max_price"),
+            modal_price=chosen.get("modal_price"),
+        )
+        db.add(row)
+        await db.commit()
+        await db.refresh(row)
+        out = MarketPriceOut.model_validate(row)
+        out.cached = False
+        return [out]
+
+    # Graceful fallback: check if PostgreSQL has the latest previously recorded price
+    fallback = (
+        await db.execute(
+            select(MarketPrice)
+            .where(
+                MarketPrice.crop_id == crop_id,
+                MarketPrice.market_id == market_id,
+            )
+            .order_by(MarketPrice.date.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    if fallback is not None:
+        out = MarketPriceOut.model_validate(fallback)
+        out.cached = True
+        return [out]
+
+    if fetch_error is not None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No mandi prices returned for this crop/market",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Official Mandi API (data.gov.in) is currently unreachable "
+                f"({fetch_error.detail}) and no cached market price exists for this crop and market."
+            ),
         )
 
-    # Prefer a record whose arrival date is today; otherwise take the first row.
-    chosen = next((r for r in records if r.get("date") == today), records[0])
-    row = MarketPrice(
-        crop_id=crop_id,
-        market_id=market_id,
-        date=today,
-        min_price=chosen.get("min_price"),
-        max_price=chosen.get("max_price"),
-        modal_price=chosen.get("modal_price"),
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="No mandi prices returned for this crop/market",
     )
-    db.add(row)
-    await db.commit()
-    await db.refresh(row)
-    return [row]
+
 
 
 @router.get("/predict", response_model=PricePredictionOut)

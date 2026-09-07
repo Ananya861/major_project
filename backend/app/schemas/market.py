@@ -25,6 +25,7 @@ class MarketPriceOut(BaseModel):
     min_price: float | None
     max_price: float | None
     modal_price: float | None
+    cached: bool = False
 
 
 class PriceForecastItem(BaseModel):

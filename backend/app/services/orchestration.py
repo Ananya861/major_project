@@ -16,6 +16,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ml.crop_inference import CropModelNotAvailable
 from app.models import Crop, CropRecommendation, Farm, Market, MarketPrice, PricePrediction, SoilData
 from app.services.model_adapters.crop_model_adapter import predict_crop as crop_adapter_predict
 from app.services.model_adapters.exceptions import ModelNotIntegratedError
@@ -163,6 +164,9 @@ async def get_crop_recommendations(farm_id: int, db: AsyncSession) -> dict[str, 
         )
 
     weather = await _weather_for_farm(farm, db)
+    temp = weather.get("temp") if weather else None
+    humidity = weather.get("humidity") if weather else None
+    rainfall = weather.get("rainfall") if weather else None
     model_input = {
         "ph": soil.ph,
         "nitrogen": soil.nitrogen,
@@ -170,6 +174,10 @@ async def get_crop_recommendations(farm_id: int, db: AsyncSession) -> dict[str, 
         "potassium": soil.potassium,
         "moisture": soil.moisture,
         "soil_type": soil.soil_type,
+        "temperature": temp,
+        "temp": temp,
+        "humidity": humidity,
+        "rainfall": rainfall,
         "farm": {
             "farm_id": farm.farm_id,
             "latitude": farm.latitude,
@@ -181,8 +189,12 @@ async def get_crop_recommendations(farm_id: int, db: AsyncSession) -> dict[str, 
 
     try:
         raw = await crop_adapter_predict(model_input)
-    except ModelNotIntegratedError as exc:
-        raise _model_unavailable(exc) from exc
+    except (ModelNotIntegratedError, CropModelNotAvailable) as exc:
+        if isinstance(exc, ModelNotIntegratedError):
+            raise _model_unavailable(exc) from exc
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
 
     ranked = _normalize_crop_output(raw)
     generated_at = datetime.now(timezone.utc)

@@ -50,3 +50,4 @@ settings = Settings()
 
 print("DATABASE URL:", settings.DATABASE_URL)
 print("OPENWEATHER KEY LOADED:", bool(settings.OPENWEATHER_API_KEY))
+print("DATA GOV KEY LOADED:", bool(settings.DATA_GOV_API_KEY.strip()))

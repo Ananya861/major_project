@@ -8,10 +8,21 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 
-# Current Daily Price of Various Commodities from Various Markets (Mandi)
+# Official Government of India Open Government Data (OGD) Agmarknet endpoint
 AGMARKNET_URL = (
     "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 )
+
+# Standard browser headers to prevent WAF connection resets from government gateways
+DEFAULT_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/128.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 
 def _to_float(value: Any) -> float | None:
@@ -37,14 +48,15 @@ def _parse_arrival_date(raw: str | None) -> date:
 
 async def get_mandi_prices(crop_name: str, market_name: str | None = None) -> list[dict]:
     """Fetch min/max/modal prices from Agmarknet. Returns a list of dicts."""
-    if not settings.DATA_GOV_API_KEY:
+    api_key = settings.DATA_GOV_API_KEY.strip().strip("\"'")
+    if not api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="DATA_GOV_API_KEY is not configured",
         )
 
     params: dict[str, Any] = {
-        "api-key": settings.DATA_GOV_API_KEY,
+        "api-key": api_key,
         "format": "json",
         "limit": 20,
         "filters[commodity]": crop_name,
@@ -52,21 +64,41 @@ async def get_mandi_prices(crop_name: str, market_name: str | None = None) -> li
     if market_name:
         params["filters[market]"] = market_name
 
+    timeout_config = httpx.Timeout(10.0, connect=5.0)
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=timeout_config, headers=DEFAULT_HEADERS) as client:
             response = await client.get(AGMARKNET_URL, params=params)
             response.raise_for_status()
             payload = response.json()
     except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (401, 403):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Invalid or unauthorized DATA_GOV_API_KEY for data.gov.in",
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"data.gov.in error: {exc.response.status_code}",
+        ) from exc
+    except (httpx.ConnectTimeout, httpx.ReadTimeout) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Connection to data.gov.in timed out",
         ) from exc
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Could not reach data.gov.in",
         ) from exc
+
+
+    if isinstance(payload, dict) and payload.get("status") in ("failed", "error"):
+        error_msg = payload.get("message") or "data.gov.in returned an error status"
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"data.gov.in error: {error_msg}",
+        )
 
     records = payload.get("records") or []
     results: list[dict] = []
