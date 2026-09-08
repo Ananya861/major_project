@@ -12,3 +12,8 @@ __pycache__/
 # Member 2 raw downloaded mandi data
 backend/ml/data/pan_india/
 
+# IDE and editor settings
+.vscode/
+
+# Pyrefly local configuration
+pyrefly.toml
