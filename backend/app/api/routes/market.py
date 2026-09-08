@@ -1,6 +1,8 @@
 """Mandi prices (cached/live), price forecasts, and MSP comparison."""
 
 from datetime import date
+import json
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -20,28 +22,9 @@ router = APIRouter(
     tags=["Market"],
 )
 
-MSP_PRICES = {
-    "Wheat": {
-        "season": "Rabi",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 2585,
-    },
-    "Maize": {
-        "season": "Kharif",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 2410,
-    },
-    "Groundnut": {
-        "season": "Kharif",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 7517,
-    },
-    "Soyabean": {
-        "season": "Kharif",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 5708,
-    },
-}
+MSP_DATA_PATH = Path(__file__).resolve().parents[3] / "ml" / "data" / "msp_prices.json"
+with MSP_DATA_PATH.open("r", encoding="utf-8") as f:
+    MSP_PRICES = {item["commodity"]: item for item in json.load(f)}
 
 
 @router.get("/prices", response_model=list[MarketPriceOut])
@@ -341,3 +324,7 @@ async def get_msp_comparison(
         ),
         "status": status_text,
     }
+
+
+
+
