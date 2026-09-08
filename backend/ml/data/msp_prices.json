@@ -1,26 +1,84 @@
-﻿[
-    {
-        "commodity": "Wheat",
-        "season": "Rabi",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 2585
-    },
-    {
-        "commodity": "Maize",
-        "season": "Kharif",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 2410
-    },
-    {
-        "commodity": "Groundnut",
-        "season": "Kharif",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 7517
-    },
-    {
-        "commodity": "Soyabean",
-        "season": "Kharif",
-        "marketing_year": "2026-27",
-        "msp_per_quintal": 5708
-    }
+[
+  {
+    "commodity": "Wheat",
+    "season": "Rabi",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 2585
+  },
+  {
+    "commodity": "Maize",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 2410
+  },
+  {
+    "commodity": "Soyabean",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 5708
+  },
+  {
+    "commodity": "Groundnut",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 7517
+  },
+  {
+    "commodity": "Rice",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 2441
+  },
+  {
+    "commodity": "Paddy(Common)",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 2441
+  },
+  {
+    "commodity": "Mustard",
+    "season": "Rabi",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 6200
+  },
+  {
+    "commodity": "Bengal Gram(Gram)(Whole)",
+    "season": "Rabi",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 5875
+  },
+  {
+    "commodity": "Green Gram(Moong)(Whole)",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 8780
+  },
+  {
+    "commodity": "Potato",
+    "season": null,
+    "marketing_year": "2026-27",
+    "msp_per_quintal": null,
+    "msp_status": "NOT_APPLICABLE"
+  },
+  {
+    "commodity": "Onion",
+    "season": null,
+    "marketing_year": "2026-27",
+    "msp_per_quintal": null,
+    "msp_status": "NOT_APPLICABLE"
+  },
+  {
+    "commodity": "Tomato",
+    "season": null,
+    "marketing_year": "2026-27",
+    "msp_per_quintal": null,
+    "msp_status": "NOT_APPLICABLE"
+  },
+  {
+    "commodity": "Garlic",
+    "season": null,
+    "marketing_year": "2026-27",
+    "msp_per_quintal": null,
+    "msp_status": "NOT_APPLICABLE"
+  }
 ]
