@@ -77,13 +77,27 @@ def _get_market_metadata(
 
     crop_mapping = {
         1: "Wheat",
+        2: "Rice",
+        3: "Tomato",
+        4: "Onion",
+        5: "Cotton",
         16: "Maize",
+        26: "Soyabean",
+        27: "Groundnut",
+        # Backward-compatibility aliases
         28: "Soyabean",
         29: "Groundnut",
     }
 
     market_mapping = {
-        7: ("Biaora", "Madhya Pradesh", "Rajgarh"),
+        1: ("Azadpur", "Delhi", "North Delhi"),
+        2: ("Pimpalgaon", "Maharashtra", "Nashik"),
+        3: ("Kolar", "Karnataka", "Kolar"),
+        4: ("Biaora", "Madhya Pradesh", "Rajgarh"),
+        5: ("Khilchipur", "Madhya Pradesh", "Rajgarh"),
+        6: ("Jaspur", "Chattisgarh", "Jashpur"),
+        7: ("Sendhwa", "Madhya Pradesh", "Badwani"),
+        # Backward-compatibility aliases
         8: ("Khilchipur", "Madhya Pradesh", "Rajgarh"),
         9: ("Jaspur", "Chattisgarh", "Jashpur"),
         10: ("Sendhwa", "Madhya Pradesh", "Badwani"),

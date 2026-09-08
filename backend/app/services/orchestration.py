@@ -17,11 +17,24 @@ from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ml.crop_inference import CropModelNotAvailable
-from app.models import Crop, CropRecommendation, Farm, Market, MarketPrice, PricePrediction, SoilData
-from app.services.model_adapters.crop_model_adapter import predict_crop as crop_adapter_predict
+from app.models import (
+    Crop,
+    CropRecommendation,
+    Farm,
+    Market,
+    MarketPrice,
+    PricePrediction,
+    SoilData,
+)
+from app.services.model_adapters.crop_model_adapter import (
+    predict_crop as crop_adapter_predict,
+)
 from app.services.model_adapters.exceptions import ModelNotIntegratedError
-from app.services.model_adapters.price_model_adapter import predict_price as price_adapter_predict
+from app.services.model_adapters.price_model_adapter import (
+    predict_price as price_adapter_predict,
+)
 from app.services.weather_service import get_weather
+
 
 MIN_HISTORICAL_PRICES = 3
 MAX_DAYS_AHEAD = 30
@@ -29,7 +42,10 @@ RECO_DEDUP_HOURS = 24
 
 
 def _model_unavailable(exc: ModelNotIntegratedError) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.detail)
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=exc.detail,
+    )
 
 
 def _soil_has_values(soil: SoilData) -> bool:
@@ -52,13 +68,18 @@ def _normalize_crop_output(raw: Any) -> list[dict[str, Any]]:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Crop model returned no recommendations",
         )
+
     items: list[dict[str, Any]] = []
+
     for entry in raw:
         if not isinstance(entry, dict):
             continue
+
         name = str(entry.get("crop", "")).strip()
+
         if not name:
             continue
+
         try:
             confidence = float(entry.get("confidence", 0))
         except (TypeError, ValueError) as exc:
@@ -66,77 +87,136 @@ def _normalize_crop_output(raw: Any) -> list[dict[str, Any]]:
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Crop model returned an invalid confidence value",
             ) from exc
+
         if confidence > 1.0:
             confidence = confidence / 100.0
+
         if not 0.0 <= confidence <= 1.0:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Crop model confidence must be between 0 and 1",
             )
-        items.append({"crop": name, "confidence": confidence})
+
+        items.append(
+            {
+                "crop": name,
+                "confidence": confidence,
+            }
+        )
+
     if not items:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Crop model returned no valid recommendations",
         )
-    items.sort(key=lambda row: row["confidence"], reverse=True)
+
+    items.sort(
+        key=lambda row: row["confidence"],
+        reverse=True,
+    )
+
     return items
 
 
-def _normalize_price_output(raw: Any, days_ahead: int) -> list[dict[str, Any]]:
+def _normalize_price_output(
+    raw: Any,
+    days_ahead: int,
+) -> list[dict[str, Any]]:
+
     if not isinstance(raw, list) or not raw:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Price model returned no predictions",
         )
+
     items: list[dict[str, Any]] = []
     seen_dates: set[str] = set()
+
     for entry in raw:
+
         if not isinstance(entry, dict):
             continue
+
         date_str = str(entry.get("date", "")).strip()
+
         try:
             predicted_day = date.fromisoformat(date_str)
             price = float(entry["predicted_price"])
-        except (KeyError, TypeError, ValueError) as exc:
+
+        except (
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Price model returned invalid date or predicted_price values",
             ) from exc
+
         if price < 0:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Price model returned a negative predicted_price",
             )
+
         iso = predicted_day.isoformat()
+
         if iso in seen_dates:
             continue
+
         seen_dates.add(iso)
-        items.append({"date": iso, "predicted_price": round(price, 2)})
+
+        items.append(
+            {
+                "date": iso,
+                "predicted_price": round(price, 2),
+            }
+        )
+
     if not items:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Price model returned no valid predictions",
         )
-    items.sort(key=lambda row: row["date"])
+
+    items.sort(
+        key=lambda row: row["date"]
+    )
+
     return items[:days_ahead]
 
 
-async def _latest_soil(db: AsyncSession, farm_id: int) -> SoilData | None:
+async def _latest_soil(
+    db: AsyncSession,
+    farm_id: int,
+) -> SoilData | None:
+
     result = await db.execute(
         select(SoilData)
         .where(SoilData.farm_id == farm_id)
         .order_by(SoilData.recorded_at.desc())
         .limit(1)
     )
+
     return result.scalar_one_or_none()
 
 
-async def _weather_for_farm(farm: Farm, db: AsyncSession) -> dict[str, Any] | None:
+async def _weather_for_farm(
+    farm: Farm,
+    db: AsyncSession,
+) -> dict[str, Any] | None:
+
     try:
-        weather = await get_weather(farm.latitude, farm.longitude, db)
+        weather = await get_weather(
+            farm.latitude,
+            farm.longitude,
+            db,
+        )
+
     except HTTPException:
         return None
+
     return {
         "temp": weather.get("temp"),
         "humidity": weather.get("humidity"),
@@ -145,28 +225,55 @@ async def _weather_for_farm(farm: Farm, db: AsyncSession) -> dict[str, Any] | No
     }
 
 
-async def get_crop_recommendations(farm_id: int, db: AsyncSession) -> dict[str, Any]:
-    """
-    Load farm + latest soil (+ weather when available), call Member 1's adapter,
-    map crop names to the crop table, and persist crop_recommendation rows.
-    """
-    farm = (
-        await db.execute(select(Farm).where(Farm.farm_id == farm_id))
-    ).scalar_one_or_none()
-    if farm is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Farm not found")
+async def get_crop_recommendations(
+    farm_id: int,
+    db: AsyncSession,
+) -> dict[str, Any]:
 
-    soil = await _latest_soil(db, farm.farm_id)
+    """
+    Load farm + latest soil (+ weather when available),
+    call Member 1's adapter,
+    map crop names to the crop table,
+    and persist crop_recommendation rows.
+    """
+
+    farm = (
+        await db.execute(
+            select(Farm).where(
+                Farm.farm_id == farm_id
+            )
+        )
+    ).scalar_one_or_none()
+
+    if farm is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Farm not found",
+        )
+
+    soil = await _latest_soil(
+        db,
+        farm.farm_id,
+    )
+
     if soil is None or not _soil_has_values(soil):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Add a soil reading for this farm before requesting a recommendation",
+            detail=(
+                "Add a soil reading for this farm "
+                "before requesting a recommendation"
+            ),
         )
 
-    weather = await _weather_for_farm(farm, db)
+    weather = await _weather_for_farm(
+        farm,
+        db,
+    )
+
     temp = weather.get("temp") if weather else None
     humidity = weather.get("humidity") if weather else None
     rainfall = weather.get("rainfall") if weather else None
+
     model_input = {
         "ph": soil.ph,
         "nitrogen": soil.nitrogen,
@@ -187,44 +294,93 @@ async def get_crop_recommendations(farm_id: int, db: AsyncSession) -> dict[str, 
         "weather": weather,
     }
 
+    # DEBUG: Show exact values being sent to crop model
+    print("\n==========================================")
+    print("CROP MODEL INPUT")
+    print("==========================================")
+    print(f"Farm ID      : {farm.farm_id}")
+    print(f"Nitrogen     : {soil.nitrogen}")
+    print(f"Phosphorus   : {soil.phosphorus}")
+    print(f"Potassium    : {soil.potassium}")
+    print(f"pH           : {soil.ph}")
+    print(f"Moisture     : {soil.moisture}")
+    print(f"Temperature  : {temp}")
+    print(f"Humidity     : {humidity}")
+    print(f"Rainfall     : {rainfall}")
+    print("==========================================\n")
+
     try:
         raw = await crop_adapter_predict(model_input)
-    except (ModelNotIntegratedError, CropModelNotAvailable) as exc:
+
+    except (
+        ModelNotIntegratedError,
+        CropModelNotAvailable,
+    ) as exc:
+
         if isinstance(exc, ModelNotIntegratedError):
             raise _model_unavailable(exc) from exc
+
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
         ) from exc
 
     ranked = _normalize_crop_output(raw)
+
     generated_at = datetime.now(timezone.utc)
-    dedup_after = generated_at - timedelta(hours=RECO_DEDUP_HOURS)
+
+    dedup_after = (
+        generated_at
+        - timedelta(hours=RECO_DEDUP_HOURS)
+    )
+
     recommendations: list[dict[str, Any]] = []
 
     for entry in ranked:
+
         crop_name = str(entry["crop"])
         confidence = float(entry["confidence"])
+
         crop = (
-            await db.execute(select(Crop).where(func.lower(Crop.name) == crop_name.lower()))
-        ).scalar_one_or_none()
-        if crop is None:
-            recommendations.append(
-                {"crop_id": None, "crop": crop_name, "confidence": confidence}
+            await db.execute(
+                select(Crop).where(
+                    func.lower(Crop.name)
+                    == crop_name.lower()
+                )
             )
+        ).scalar_one_or_none()
+
+        if crop is None:
+
+            recommendations.append(
+                {
+                    "crop_id": None,
+                    "crop": crop_name,
+                    "confidence": confidence,
+                }
+            )
+
             continue
 
         existing = (
             await db.execute(
                 select(CropRecommendation)
                 .where(
-                    CropRecommendation.farm_id == farm.farm_id,
-                    CropRecommendation.crop_id == crop.crop_id,
-                    CropRecommendation.generated_at >= dedup_after,
+                    CropRecommendation.farm_id
+                    == farm.farm_id,
+
+                    CropRecommendation.crop_id
+                    == crop.crop_id,
+
+                    CropRecommendation.generated_at
+                    >= dedup_after,
                 )
                 .limit(1)
             )
         ).scalar_one_or_none()
+
         if existing is None:
+
             db.add(
                 CropRecommendation(
                     farm_id=farm.farm_id,
@@ -233,11 +389,17 @@ async def get_crop_recommendations(farm_id: int, db: AsyncSession) -> dict[str, 
                     generated_at=generated_at,
                 )
             )
+
         recommendations.append(
-            {"crop_id": crop.crop_id, "crop": crop.name, "confidence": confidence}
+            {
+                "crop_id": crop.crop_id,
+                "crop": crop.name,
+                "confidence": confidence,
+            }
         )
 
     await db.commit()
+
     return {
         "farm_id": farm.farm_id,
         "recommendations": recommendations,
@@ -251,27 +413,53 @@ async def get_price_predictions(
     days_ahead: int,
     db: AsyncSession,
 ) -> dict[str, Any]:
+
     """
-    Load historical mandi prices, call Member 2's adapter, and persist
-    price_prediction rows without duplicating crop/market/predicted_date.
+    Load historical mandi prices,
+    call Member 2's adapter,
+    and persist price_prediction rows
+    without duplicating crop/market/predicted_date.
     """
+
     if days_ahead < 1 or days_ahead > MAX_DAYS_AHEAD:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"days_ahead must be between 1 and {MAX_DAYS_AHEAD}",
+            detail=(
+                f"days_ahead must be between "
+                f"1 and {MAX_DAYS_AHEAD}"
+            ),
         )
 
     crop = (
-        await db.execute(select(Crop).where(Crop.crop_id == crop_id))
+        await db.execute(
+            select(Crop).where(
+                Crop.crop_id == crop_id
+            )
+        )
     ).scalar_one_or_none()
+
     if crop is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crop not found")
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Crop not found",
+        )
 
     market = (
-        await db.execute(select(Market).where(Market.market_id == market_id))
+        await db.execute(
+            select(Market).where(
+                Market.market_id == market_id
+            )
+        )
     ).scalar_one_or_none()
+
     if market is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Market not found")
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Market not found",
+        )
 
     history_rows = (
         await db.execute(
@@ -280,15 +468,27 @@ async def get_price_predictions(
                 MarketPrice.crop_id == crop_id,
                 MarketPrice.market_id == market_id,
             )
-            .order_by(MarketPrice.date.asc())
+            .order_by(
+                MarketPrice.date.asc()
+            )
         )
     ).scalars().all()
+
     if len(history_rows) < MIN_HISTORICAL_PRICES:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "Insufficient historical market data for this crop and market "
-                f"(need at least {MIN_HISTORICAL_PRICES} records)"
+                f"Insufficient historical market price records "
+                f"for {crop.name} in {market.name} "
+                f"(found {len(history_rows)}, "
+                f"need at least {MIN_HISTORICAL_PRICES}). "
+                "Trained price forecasting data is available "
+                "for benchmark mandis: "
+                "Wheat (Khilchipur), "
+                "Soyabean (Biaora), "
+                "Maize (Jaspur), "
+                "Groundnut (Sendhwa)."
             ),
         )
 
@@ -303,33 +503,60 @@ async def get_price_predictions(
     ]
 
     try:
+
         raw = await price_adapter_predict(
             crop_id=crop_id,
             market_id=market_id,
             days_ahead=days_ahead,
             historical_data=historical_data,
         )
+
     except ModelNotIntegratedError as exc:
+
         raise _model_unavailable(exc) from exc
 
-    forecast = _normalize_price_output(raw, days_ahead)
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    forecast = _normalize_price_output(
+        raw,
+        days_ahead,
+    )
+
     generated_at = datetime.now(timezone.utc)
 
     for entry in forecast:
-        predicted_day = date.fromisoformat(entry["date"])
+
+        predicted_day = date.fromisoformat(
+            entry["date"]
+        )
+
         existing = (
             await db.execute(
                 select(PricePrediction)
                 .where(
                     PricePrediction.crop_id == crop_id,
-                    PricePrediction.market_id == market_id,
-                    cast(PricePrediction.predicted_date, Date) == predicted_day,
+
+                    PricePrediction.market_id
+                    == market_id,
+
+                    cast(
+                        PricePrediction.predicted_date,
+                        Date,
+                    )
+                    == predicted_day,
                 )
                 .limit(1)
             )
         ).scalar_one_or_none()
+
         if existing is not None:
             continue
+
         db.add(
             PricePrediction(
                 crop_id=crop_id,
@@ -340,12 +567,15 @@ async def get_price_predictions(
                     predicted_day.day,
                     tzinfo=timezone.utc,
                 ),
-                predicted_price=float(entry["predicted_price"]),
+                predicted_price=float(
+                    entry["predicted_price"]
+                ),
                 generated_at=generated_at,
             )
         )
 
     await db.commit()
+
     return {
         "crop_id": crop_id,
         "market_id": market_id,

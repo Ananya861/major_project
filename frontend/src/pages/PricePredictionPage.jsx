@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { catalogService } from '../services/catalogService';
-import { marketService } from '../services/marketService';
+import { marketService, CROP_BENCHMARK_MARKET_MAP } from '../services/marketService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import Badge from '../components/common/Badge';
@@ -90,7 +90,8 @@ const PricePredictionPage = () => {
     } catch (err) {
       setError(
         err.friendlyMessage ||
-          'Price forecast failed. Note: The ML model currently supports primary agricultural commodities and requires at least 3 historical price records.'
+        err.message ||
+        'Price forecast failed. Note: The ML model currently supports primary agricultural commodities and requires at least 3 historical price records.'
       );
     } finally {
       setLoadingForecast(false);
@@ -118,7 +119,11 @@ const PricePredictionPage = () => {
           const defaultCrop = wheatCrop || cropsData[0];
 
           const initialCropId = cropParam || (defaultCrop ? String(defaultCrop.crop_id) : '');
-          const initialMarketId = marketParam || (marketsData.length > 0 ? String(marketsData[0].market_id) : '');
+          const benchmarkMarketId =
+            initialCropId && CROP_BENCHMARK_MARKET_MAP[initialCropId]
+              ? String(CROP_BENCHMARK_MARKET_MAP[initialCropId])
+              : (marketsData.length > 0 ? String(marketsData[0].market_id) : '');
+          const initialMarketId = marketParam || benchmarkMarketId;
 
           setSelectedCropId((prev) => cropParam || prev || initialCropId);
           setSelectedMarketId((prev) => marketParam || prev || initialMarketId);
@@ -142,14 +147,25 @@ const PricePredictionPage = () => {
 
   const chartData =
     forecastData?.forecast?.map((item) => ({
-      date: formatDate(item.date),
-      predictedPrice: item.predicted_modal_price,
+      date: item.date,
+      formattedDate: formatDate(item.date),
+      price: item.predicted_price !== undefined ? item.predicted_price : item.predicted_modal_price,
       trend: item.trend,
     })) || [];
 
-  const firstPrice = forecastData?.forecast?.[0]?.predicted_modal_price;
-  const lastPrice = forecastData?.forecast?.[forecastData.forecast.length - 1]?.predicted_modal_price;
-  const priceChange = firstPrice && lastPrice ? lastPrice - firstPrice : 0;
+  const firstPrice =
+    forecastData?.forecast?.[0]?.predicted_price !== undefined
+      ? forecastData?.forecast?.[0]?.predicted_price
+      : forecastData?.forecast?.[0]?.predicted_modal_price;
+
+  const lastPrice =
+    forecastData?.forecast?.length
+      ? (forecastData.forecast[forecastData.forecast.length - 1]?.predicted_price !== undefined
+          ? forecastData.forecast[forecastData.forecast.length - 1]?.predicted_price
+          : forecastData.forecast[forecastData.forecast.length - 1]?.predicted_modal_price)
+      : null;
+
+  const priceChange = firstPrice != null && lastPrice != null ? lastPrice - firstPrice : 0;
   const priceChangePct = firstPrice ? (priceChange / firstPrice) * 100 : 0;
 
   return (
@@ -182,7 +198,13 @@ const PricePredictionPage = () => {
                 </label>
                 <select
                   value={selectedCropId}
-                  onChange={(e) => setSelectedCropId(e.target.value)}
+                  onChange={(e) => {
+                    const newCropId = e.target.value;
+                    setSelectedCropId(newCropId);
+                    if (CROP_BENCHMARK_MARKET_MAP[newCropId]) {
+                      setSelectedMarketId(String(CROP_BENCHMARK_MARKET_MAP[newCropId]));
+                    }
+                  }}
                   className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
                 >
                   {crops.map((c) => (
@@ -285,9 +307,8 @@ const PricePredictionPage = () => {
                     Forecast Trend
                   </span>
                   <div
-                    className={`text-2xl font-extrabold mt-1 flex items-center space-x-1 ${
-                      priceChange >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                    }`}
+                    className={`text-2xl font-extrabold mt-1 flex items-center space-x-1 ${priceChange >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
                   >
                     {priceChange >= 0 ? (
                       <ArrowUpRight className="w-6 h-6" />
