@@ -25,10 +25,20 @@
   - [Crop Recommendation Module (Member 1)](#crop-recommendation-module-member-1)
   - [Mandi Price Forecasting & MSP Comparison (Member 2)](#mandi-price-forecasting--msp-comparison-member-2)
 - [8. API Overview](#8-api-overview)
-- [9. Installation and Setup](#9-installation-and-setup)
+- [9. How to Setup and Run the Project](#9-how-to-setup-and-run-the-project)
   - [Prerequisites](#prerequisites)
+  - [Clone the Repository](#clone-the-repository)
   - [Backend Setup](#backend-setup)
+  - [PostgreSQL Database Setup](#postgresql-database-setup)
+  - [Run the FastAPI Backend](#run-the-fastapi-backend)
   - [Frontend Setup](#frontend-setup)
+  - [Run the React / Vite Frontend](#run-the-react--vite-frontend)
+  - [Running Backend and Frontend Together](#running-backend-and-frontend-together)
+  - [Database and API Verification](#database-and-api-verification)
+  - [GitHub Codespaces Setup](#github-codespaces-setup)
+  - [Troubleshooting](#troubleshooting)
+  - [Project Execution Flow](#project-execution-flow)
+  - [Security Best Practices](#security-best-practices)
 - [10. Environment Configuration](#10-environment-configuration)
 - [11. Build Verification](#11-build-verification)
 - [12. Team Contributions](#12-team-contributions)
@@ -410,94 +420,336 @@ The backend exposes a fully documented RESTful API built with FastAPI. Interacti
 
 ---
 
-## 9. Installation and Setup
+## 9. How to Setup and Run the Project
+
+This guide provides step-by-step instructions to configure, run, verify, and troubleshoot the Agri Smart AI platform on your local development machine or GitHub Codespaces.
+
+---
 
 ### Prerequisites
 
-Ensure the following tools are installed on your workstation:
+Ensure the following tools are installed on your system before proceeding:
 
-- **Python:** Version `3.10` or higher
-- **Node.js:** Version `18.x` or higher (with `npm`)
-- **PostgreSQL:** Version `14` or higher
-- **Git**
+- **Git:** Version `2.x` or higher ([Download Git](https://git-scm.com/))
+- **Python:** Version `3.10` or higher ([Download Python](https://www.python.org/downloads/))
+- **Node.js & npm:** Node.js `18.x` or higher with `npm 9.x` or higher ([Download Node.js](https://nodejs.org/))
+- **PostgreSQL:** Version `14` or higher ([Download PostgreSQL](https://www.postgresql.org/download/))
+- **Docker & Docker Compose (Optional):** If you prefer running PostgreSQL in a container instead of a local native service, Docker is supported via `backend/docker-compose.yml`.
+
+---
+
+### Clone the Repository
+
+1. Clone the project repository using Git:
+   ```bash
+   git clone https://github.com/Ananya861/major_project.git
+   ```
+
+2. Navigate into the cloned project root directory:
+   ```bash
+   cd major_project
+   ```
 
 ---
 
 ### Backend Setup
 
-1. **Navigate to the backend directory:**
+1. **Navigate to the `backend` directory:**
    ```bash
    cd backend
    ```
 
-2. **Create and activate a virtual environment:**
+2. **Create and activate a Python virtual environment:**
    ```bash
    # On Windows (PowerShell)
    python -m venv venv
    .\venv\Scripts\Activate.ps1
+
+   # On Windows (Command Prompt)
+   python -m venv venv
+   venv\Scripts\activate.bat
 
    # On Linux / macOS
    python3 -m venv venv
    source venv/bin/activate
    ```
 
-3. **Install required Python dependencies:**
+3. **Install backend dependencies:**
+   Install all required packages defined in `requirements.txt`:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables:**
-   Copy `.env.example` to `.env` and fill in your database credentials and API keys:
+4. **Configure backend environment variables:**
+   Create a local `.env` file by copying the template file `.env.example`:
    ```bash
-   # On Windows
+   # On Windows (PowerShell / Command Prompt)
    copy .env.example .env
 
    # On Linux / macOS
    cp .env.example .env
    ```
 
-5. **Run database migrations:**
-   Ensure PostgreSQL is running and the target database exists, then execute:
+   Open `backend/.env` in your text editor and specify your local configuration using placeholders:
+   ```ini
+   # Database connection string (asyncpg driver)
+   DATABASE_URL=postgresql+asyncpg://<db_user>:<db_password>@localhost:5432/smart_farmer
+
+   # JWT Authentication secret (generate a secure random 32+ character string)
+   JWT_SECRET=<your-secure-random-secret-key>
+   JWT_ALGORITHM=HS256
+   ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+   # External API Keys
+   OPENWEATHER_API_KEY=<your_openweather_api_key>
+   DATA_GOV_API_KEY=<your_data_gov_api_key>
+
+   # Allowed CORS origins (* for development or comma-separated URLs)
+   CORS_ORIGINS=*
+   ```
+
+   > [!NOTE]
+   > Replace `<db_user>`, `<db_password>`, `<your_openweather_api_key>`, and `<your_data_gov_api_key>` with your actual local credentials. Never commit `.env` to version control.
+
+---
+
+### PostgreSQL Database Setup
+
+1. **Ensure the PostgreSQL service is active:**
+   - **Local Native PostgreSQL:** Ensure PostgreSQL is running as a local service (e.g., via Windows Services, `pg_ctl start`, or macOS `brew services start postgresql`).
+   - **Docker Alternative:** If using Docker, launch the database container from the `backend/` directory:
+     ```bash
+     docker compose up -d db
+     ```
+
+2. **Create the target database:**
+   Connect to PostgreSQL using `psql` (or pgAdmin) and create the `smart_farmer` database:
+   ```sql
+   CREATE DATABASE smart_farmer;
+   ```
+   Or create it directly from your command line:
+   ```bash
+   # Windows / Linux / macOS
+   psql -U postgres -c "CREATE DATABASE smart_farmer;"
+   ```
+
+3. **Verify the database connection string format:**
+   Ensure the `DATABASE_URL` in `backend/.env` adheres to the asynchronous `asyncpg` format:
+   ```text
+   postgresql+asyncpg://<username>:<password>@localhost:5432/smart_farmer
+   ```
+
+4. **Run database migrations with Alembic:**
+   From within the `backend/` directory (with your virtual environment activated), execute Alembic migrations to create all database schemas and tables:
    ```bash
    alembic upgrade head
    ```
+   This command applies all migration revisions, establishing the database tables: `farmer`, `farm`, `soil_data`, `crop`, `crop_recommendation`, `market`, `market_price`, `price_prediction`, `notification`, and `weather_log`.
 
-6. **Start the FastAPI backend server:**
+---
+
+### Run the FastAPI Backend
+
+1. From the `backend/` directory (with `venv` activated), start the Uvicorn ASGI server:
    ```bash
-   python -m uvicorn app.main:app --reload
+   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
    ```
-   The backend API will be available at `http://127.0.0.1:8000`. Interactive documentation is available at `http://127.0.0.1:8000/docs`.
+
+2. **Verify backend server URLs (Local Execution Examples):**
+   - **Base API URL:** `http://127.0.0.1:8000`
+   - **Interactive Swagger UI:** `http://127.0.0.1:8000/docs`
+   - **Alternative ReDoc API Docs:** `http://127.0.0.1:8000/redoc`
+   - **Health Check Endpoint:** `http://127.0.0.1:8000/health`
 
 ---
 
 ### Frontend Setup
 
-1. **Navigate to the frontend directory:**
+1. **Open a new terminal and navigate to the `frontend/` directory:**
    ```bash
    cd frontend
    ```
 
-2. **Install Node.js packages:**
+2. **Install Node.js dependencies:**
+   Install all dependencies specified in `package.json`:
    ```bash
    npm install
    ```
 
-3. **Configure environment variables:**
-   Copy `.env.example` to `.env`:
+3. **Configure frontend environment variables:**
+   Copy the frontend `.env.example` template to `.env`:
    ```bash
-   # On Windows
+   # On Windows (PowerShell / Command Prompt)
    copy .env.example .env
 
    # On Linux / macOS
    cp .env.example .env
    ```
-   Ensure `VITE_API_BASE_URL` points to your running backend (`http://localhost:8000`).
 
-4. **Start the Vite development server:**
+   Open `frontend/.env` and ensure the API base URL points to your running local FastAPI backend:
+   ```ini
+   VITE_API_BASE_URL=http://localhost:8000
+   ```
+
+   > [!IMPORTANT]
+   > For standard local development, keep `VITE_API_BASE_URL` set to your local backend URL (`http://localhost:8000`). Do not hardcode remote or Codespaces URLs in your default local configuration.
+
+---
+
+### Run the React / Vite Frontend
+
+1. From the `frontend/` directory, start the Vite development server:
    ```bash
    npm run dev
    ```
-   The application dashboard will be accessible at `http://localhost:5173`.
+
+2. **Access the application in your browser:**
+   Open [http://localhost:5173](http://localhost:5173) to view the Agri Smart AI web interface.
+
+---
+
+### Running Backend and Frontend Together
+
+To run the full stack locally, open three separate terminal windows:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Terminal 1: PostgreSQL Database                                             │
+│ $ psql / pg_ctl / Docker: cd backend && docker compose up -d db             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Terminal 2: FastAPI Backend                                                 │
+│ $ cd backend                                                                │
+│ $ .\venv\Scripts\Activate.ps1   # (or source venv/bin/activate on Unix)     │
+│ $ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Terminal 3: React / Vite Frontend                                           │
+│ $ cd frontend                                                               │
+│ $ npm run dev                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Database and API Verification
+
+After starting the services, verify that everything is running properly:
+
+1. **Verify Database Migrations:**
+   In the `backend/` directory, check that Alembic is up to date:
+   ```bash
+   alembic current
+   ```
+   To list all tables in the `smart_farmer` database:
+   ```bash
+   psql -U postgres -d smart_farmer -c "\dt"
+   ```
+   You should see: `alembic_version`, `crop`, `crop_recommendation`, `farm`, `farmer`, `market`, `market_price`, `notification`, `price_prediction`, `soil_data`, and `weather_log`.
+
+2. **Verify the Backend Health Check:**
+   Run a curl request against the `/health` endpoint:
+   ```bash
+   curl http://127.0.0.1:8000/health
+   ```
+   **Expected Response:**
+   ```json
+   {"status": "ok"}
+   ```
+
+3. **Verify Interactive API Documentation:**
+   Open `http://127.0.0.1:8000/docs` in your browser. Confirm that the routes under `auth`, `farms`, `market`, `recommend`, `weather`, `notifications`, and `catalog` are loaded and functional.
+
+---
+
+### GitHub Codespaces Setup
+
+The project natively supports running inside GitHub Codespaces. If you are developing inside a Codespace, follow these specific configurations:
+
+1. **Port Visibility Configuration:**
+   - In GitHub Codespaces, open the **Ports** panel in the bottom toolbar.
+   - Forward port `8000` (FastAPI backend) and port `5173` (Vite frontend).
+   - Right-click on port `8000` and set **Port Visibility** to **Public** so browser requests from the frontend can reach the API.
+   - **SECURITY RULE:** Keep port `5432` (PostgreSQL) strictly **Private** (internal). Never expose database ports publicly.
+
+2. **CORS Support:**
+   The backend entrypoint (`app/main.py`) includes built-in CORS middleware configured with a regular expression matching GitHub Codespaces domain patterns (`https://.*\.app\.github\.dev`).
+
+3. **Codespaces Frontend Configuration:**
+   In Codespaces, `.env` files are ignored by git and must be created fresh:
+   - Create `backend/.env` from `backend/.env.example`.
+   - In `frontend/.env`, set `VITE_API_BASE_URL` to your forwarded backend Codespaces URL:
+     ```ini
+     VITE_API_BASE_URL=https://<your-codespace-name>-8000.app.github.dev
+     ```
+
+---
+
+### Troubleshooting
+
+| Issue / Symptom | Probable Cause | Recommended Resolution |
+| :--- | :--- | :--- |
+| **`connection to server at "localhost", port 5432 failed: Connection refused`** | PostgreSQL service is not running or credentials are wrong. | 1. Ensure PostgreSQL is active (`net start postgresql` on Windows or `sudo systemctl status postgresql` on Linux).<br>2. Verify host, port (`5432`), user, and password in `backend/.env`. |
+| **`ERROR: [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8000)`** | Port `8000` is already occupied by another running server instance. | 1. Stop the existing process running on port 8000.<br>2. Alternatively, specify another port: `python -m uvicorn app.main:app --port 8001` (and update `VITE_API_BASE_URL` in `frontend/.env`). |
+| **Frontend shows "Network Error" or cannot connect to backend** | Frontend cannot resolve `VITE_API_BASE_URL` or backend is down. | 1. Confirm FastAPI backend is active and responds at `http://127.0.0.1:8000/health`.<br>2. Verify `VITE_API_BASE_URL=http://localhost:8000` in `frontend/.env`.<br>3. Restart the Vite server (`npm run dev`) after modifying `.env`. |
+| **CORS Policy Error: `No 'Access-Control-Allow-Origin' header is present`** | Request origin host is not permitted by backend CORS settings. | 1. Check `CORS_ORIGINS` in `backend/.env`. For local development, set `CORS_ORIGINS=*`.<br>2. For Codespaces, ensure `main.py` contains `allow_origin_regex=r"https://.*\.app\.github\.dev"`. |
+| **`Missing / NoneType Error` during startup or API calls** | Missing environment variable in `.env`. | 1. Verify `backend/.env` exists and matches the keys defined in `backend/.env.example`.<br>2. Ensure `OPENWEATHER_API_KEY` and `DATA_GOV_API_KEY` are defined. |
+| **`alembic.util.exc.CommandError: Can't locate revision identified by...`** | Database schema is out of sync with migration history or database does not exist. | 1. Ensure the `smart_farmer` database was created before running migrations.<br>2. Run `alembic upgrade head` from the `backend/` directory. |
+| **Codespaces: 401 / 403 or API fetch failure in browser** | Port 8000 visibility is set to Private. | In the Codespaces Ports tab, right-click Port `8000` and change **Port Visibility** to **Public**. |
+
+---
+
+### Project Execution Flow
+
+The end-to-end operational architecture connects the presentation tier, REST services, persistence, external public APIs, and machine learning inference engines:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          User / Web Browser Client                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    React 18 + Vite Single-Page Application                  │
+│                     (Port 5173 — Tailwind CSS + Recharts)                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      │  Axios HTTP / REST (JSON + Bearer JWT)
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       FastAPI Application Server                            │
+│                        (Port 8000 — app.main:app)                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+          │                           │                           │
+          ▼                           ▼                           ▼
+┌──────────────────┐        ┌──────────────────┐        ┌──────────────────┐
+│ PostgreSQL (5432)│        │  External APIs   │        │   ML Adapters    │
+│ (asyncpg driver) │        │ (httpx client)   │        │ (Scikit-Learn)   │
+│                  │        │                  │        │                  │
+│ • farmer         │        │ • OpenWeatherMap │        │ • Crop Reco      │
+│ • farm           │        │   (Temp, Humid,  │        │   (RandomForest) │
+│ • soil_data      │        │    3h Cache)     │        │                  │
+│ • crop_reco      │        │ • data.gov.in    │        │ • Price Forecast │
+│ • market_price   │        │   (Agmarknet     │        │   (HistGradient  │
+│ • price_pred     │        │    Mandi Rates)  │        │    Boosting)     │
+│ • notification   │        │ • MSP Benchmarks │        │                  │
+└──────────────────┘        └──────────────────┘        └──────────────────┘
+```
+
+---
+
+### Security Best Practices
+
+To protect sensitive credentials and ensure system integrity:
+
+- **Never Commit `.env` Files:** Ensure `.env` is listed in your `.gitignore` before committing. Always use `.env.example` as a template containing only placeholders.
+- **Never Hardcode Credentials:** Secrets, database passwords, JWT signing keys, and external API tokens must always be supplied via environment variables.
+- **Isolate Database Ports:** In cloud/Codespaces environments, never expose PostgreSQL port `5432` to the public internet. Keep database access internal.
+- **Key Rotation:** If an API key or password is ever accidentally exposed in code or terminal logs, immediately revoke and regenerate it from the provider's dashboard (OpenWeatherMap, data.gov.in, or database administrator).
 
 ---
 
