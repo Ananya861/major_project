@@ -26,4 +26,19 @@ export const farmService = {
     const response = await api.get(`/recommend/crops/${farmId}`);
     return response.data;
   },
+
+  async getRecommendationHistory(farmId = null) {
+    const url = farmId ? `/recommendations/history?farm_id=${farmId}` : '/recommendations/history';
+    const response = await api.get(url);
+    return response.data;
+  },
+};
+
+export const recommendationService = {
+  getHistory(farmId = null) {
+    return farmService.getRecommendationHistory(farmId);
+  },
+  getCropRecommendation(farmId) {
+    return farmService.getCropRecommendation(farmId);
+  },
 };

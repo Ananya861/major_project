@@ -34,9 +34,13 @@ def payload_to_frame(soil_data: dict) -> pd.DataFrame:
     """
     Build a one-row DataFrame with the training feature names.
 
-    humidity: weather humidity if present, else soil moisture (0–100 proxy).
-    soil_type: ignored (not in the public dataset).
-    Missing values stay as NaN so the fitted SimpleImputer can fill them.
+    - humidity: relative atmospheric humidity from weather (0–100%).
+    - moisture: soil moisture percentage (0–100%), kept distinct from atmospheric humidity.
+    - rainfall: cumulative seasonal rainfall in mm (training mean ~103.5 mm).
+      Instantaneous 1-hour precipitation from weather APIs (frequently 0.0 mm)
+      is not seasonal rainfall. Missing/non-positive values stay as NaN so the
+      fitted SimpleImputer can impute the training dataset median (~94.8 mm).
+    - soil_type: ignored (not in the public training dataset).
     """
     nitrogen = _as_float(soil_data.get("nitrogen", soil_data.get("N")))
     phosphorus = _as_float(soil_data.get("phosphorus", soil_data.get("P")))
@@ -44,9 +48,16 @@ def payload_to_frame(soil_data: dict) -> pd.DataFrame:
     ph = _as_float(soil_data.get("ph"))
     temperature = _as_float(soil_data.get("temperature", soil_data.get("temp")))
     humidity = _as_float(soil_data.get("humidity"))
-    if humidity is None:
-        humidity = _as_float(soil_data.get("moisture"))
-    rainfall = _as_float(soil_data.get("rainfall"))
+    moisture = _as_float(soil_data.get("moisture"))
+
+    # The crop recommendation model expects cumulative seasonal rainfall (mm).
+    # 1-hour precipitation from weather APIs is typically 0.0 mm when it is not actively raining.
+    # Passing 0.0 mm triggers an out-of-distribution drought state (minimum tree split is ~30 mm).
+    # If seasonal rainfall is missing or non-positive, leave as None so SimpleImputer handles it.
+    raw_rain = soil_data.get("seasonal_rainfall", soil_data.get("rainfall"))
+    rainfall = _as_float(raw_rain)
+    if rainfall is not None and rainfall <= 0.0:
+        rainfall = None
 
     row = {
         "N": _clip("N", nitrogen),
@@ -57,4 +68,7 @@ def payload_to_frame(soil_data: dict) -> pd.DataFrame:
         "ph": _clip("ph", ph),
         "rainfall": _clip("rainfall", rainfall),
     }
-    return pd.DataFrame([row], columns=NUMERIC_FEATURES)
+    if moisture is not None:
+        row["moisture"] = moisture
+
+    return pd.DataFrame([row])

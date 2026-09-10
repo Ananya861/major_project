@@ -11,8 +11,6 @@ import {
   Bell,
   User,
   Calculator,
-  ScanLine,
-  Droplets,
   HelpCircle,
   X,
 } from 'lucide-react';
@@ -50,8 +48,6 @@ const navigationGroups = [
     title: 'TOOLS & SERVICES',
     items: [
       { name: 'Profit Calculator', to: '/profit-calculator', icon: Calculator },
-      { name: 'Disease Detection', to: '/disease-detection', icon: ScanLine, tag: 'Soon' },
-      { name: 'Smart Irrigation', to: '/smart-irrigation', icon: Droplets, tag: 'Soon' },
     ],
   },
   {

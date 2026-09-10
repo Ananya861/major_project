@@ -272,7 +272,15 @@ async def get_crop_recommendations(
 
     temp = weather.get("temp") if weather else None
     humidity = weather.get("humidity") if weather else None
-    rainfall = weather.get("rainfall") if weather else None
+    weather_rainfall_1h = weather.get("rainfall") if weather else None
+
+    # OpenWeatherMap provides instantaneous 1-hour rain (mm/h), typically 0.0 mm
+    # unless actively raining at the farm during the API request.
+    # The crop recommendation ML model was trained on cumulative seasonal rainfall (mm).
+    # Passing 0.0 mm causes severe out-of-distribution drought bias (repeated Muskmelon/Grapes/Banana/Maize).
+    # We record 1-hour rain in weather metadata, but pass seasonal rainfall as None
+    # so the pipeline's fitted SimpleImputer can apply the training dataset median (~94.8 mm).
+    seasonal_rainfall = getattr(soil, "rainfall", None)
 
     model_input = {
         "ph": soil.ph,
@@ -284,7 +292,8 @@ async def get_crop_recommendations(
         "temperature": temp,
         "temp": temp,
         "humidity": humidity,
-        "rainfall": rainfall,
+        "weather_rainfall_1h": weather_rainfall_1h,
+        "rainfall": seasonal_rainfall,
         "farm": {
             "farm_id": farm.farm_id,
             "latitude": farm.latitude,
@@ -298,15 +307,16 @@ async def get_crop_recommendations(
     print("\n==========================================")
     print("CROP MODEL INPUT")
     print("==========================================")
-    print(f"Farm ID      : {farm.farm_id}")
-    print(f"Nitrogen     : {soil.nitrogen}")
-    print(f"Phosphorus   : {soil.phosphorus}")
-    print(f"Potassium    : {soil.potassium}")
-    print(f"pH           : {soil.ph}")
-    print(f"Moisture     : {soil.moisture}")
-    print(f"Temperature  : {temp}")
-    print(f"Humidity     : {humidity}")
-    print(f"Rainfall     : {rainfall}")
+    print(f"Farm ID          : {farm.farm_id}")
+    print(f"Nitrogen (N)     : {soil.nitrogen}")
+    print(f"Phosphorus (P)   : {soil.phosphorus}")
+    print(f"Potassium (K)    : {soil.potassium}")
+    print(f"pH               : {soil.ph}")
+    print(f"Soil Moisture    : {soil.moisture}")
+    print(f"Temperature      : {temp}")
+    print(f"Air Humidity     : {humidity}")
+    print(f"1h Weather Rain  : {weather_rainfall_1h}")
+    print(f"Seasonal Rain    : {seasonal_rainfall} (handled by pipeline SimpleImputer if None)")
     print("==========================================\n")
 
     try:

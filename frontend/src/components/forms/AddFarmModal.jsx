@@ -17,25 +17,58 @@ const AddFarmModal = ({ isOpen, onClose }) => {
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
+      setError('Geolocation is not supported by your browser.');
       return;
     }
+
     setLocating(true);
     setError(null);
+
+    const geolocationOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (!position || !position.coords) {
+          setError('Unable to retrieve valid GPS coordinates. Please enter them manually.');
+          setLocating(false);
+          return;
+        }
+
+        const { latitude, longitude } = position.coords;
         setFormData((prev) => ({
           ...prev,
-          latitude: position.coords.latitude.toFixed(6),
-          longitude: position.coords.longitude.toFixed(6),
+          latitude: typeof latitude === 'number' ? latitude.toFixed(6) : String(latitude),
+          longitude: typeof longitude === 'number' ? longitude.toFixed(6) : String(longitude),
         }));
+        setError(null);
         setLocating(false);
       },
       (err) => {
-        setError(`Unable to retrieve location: ${err.message}`);
+        let message = 'Unable to retrieve your location. Please enter coordinates manually.';
+        switch (err.code) {
+          case 1: // PERMISSION_DENIED
+            message = 'Location access was denied. Please allow location permissions in your browser settings.';
+            break;
+          case 2: // POSITION_UNAVAILABLE
+            message = 'Location information is currently unavailable. Please check your network or GPS connection.';
+            break;
+          case 3: // TIMEOUT
+            message = 'Location request timed out. Please try again or enter coordinates manually.';
+            break;
+          default:
+            if (err.message) {
+              message = `Location error: ${err.message}`;
+            }
+            break;
+        }
+        setError(message);
         setLocating(false);
       },
-      { timeout: 10000 }
+      geolocationOptions
     );
   };
 
@@ -102,7 +135,7 @@ const AddFarmModal = ({ isOpen, onClose }) => {
             ) : (
               <MapPin className="w-3.5 h-3.5" />
             )}
-            <span>{locating ? 'Detecting...' : 'Use Current GPS'}</span>
+            <span>{locating ? 'Getting current location...' : 'Use Current GPS'}</span>
           </button>
         </div>
 

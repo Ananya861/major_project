@@ -24,7 +24,8 @@ async def predict_crop(soil_data: dict[str, Any]) -> list[dict[str, Any]]:
         soil_data.setdefault("temp", w.get("temp"))
         soil_data.setdefault("temperature", w.get("temp"))
         soil_data.setdefault("humidity", w.get("humidity"))
-        soil_data.setdefault("rainfall", w.get("rainfall"))
+        # Note: w.get("rainfall") is 1-hour precipitation from OpenWeatherMap (mm/h),
+        # not seasonal/annual rainfall (mm). We do not default seasonal rainfall to 1h rain.
 
     try:
         return recommend_crops(soil_data, top_k=3)

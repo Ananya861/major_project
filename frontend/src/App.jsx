@@ -22,8 +22,6 @@ import WeatherPage from './pages/WeatherPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
 import ProfitCalculatorPage from './pages/ProfitCalculatorPage';
-import DiseaseDetectionPage from './pages/DiseaseDetectionPage';
-import SmartIrrigationPage from './pages/SmartIrrigationPage';
 import HelpPage from './pages/HelpPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -59,8 +57,6 @@ function App() {
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profit-calculator" element={<ProfitCalculatorPage />} />
-            <Route path="/disease-detection" element={<DiseaseDetectionPage />} />
-            <Route path="/smart-irrigation" element={<SmartIrrigationPage />} />
             <Route path="/help" element={<HelpPage />} />
           </Route>
 
