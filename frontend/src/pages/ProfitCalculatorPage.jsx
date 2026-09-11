@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../i18n/LanguageContext';
 import { Calculator, AlertCircle, TrendingUp, IndianRupee, PieChart } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 
 const ProfitCalculatorPage = () => {
+  const { t } = useTranslation();
   const [inputs, setInputs] = useState({
     cropName: 'Wheat',
     acres: 3,
@@ -34,14 +36,13 @@ const ProfitCalculatorPage = () => {
       <div>
         <div className="inline-flex items-center space-x-2 text-xs font-semibold text-agri-700 bg-agri-50 px-3 py-1 rounded-full border border-agri-200 mb-2">
           <Calculator className="w-3.5 h-3.5 text-agri-600" />
-          <span>Farm Planning Tool</span>
+          <span>{t('calculator.title', 'Crop Profitability & Yield Calculator')}</span>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Farm Profit &amp; Cost Estimator
+          {t('calculator.title', 'Crop Profitability & Yield Calculator')}
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-          Estimate potential revenue, cost breakdown, net profit, and break-even mandi price per
-          quintal for your upcoming crop cycle.
+          {t('calculator.subtitle', 'Estimate production costs, gross revenue, and net profit per acre before sowing.')}
         </p>
       </div>
 
@@ -59,13 +60,13 @@ const ProfitCalculatorPage = () => {
         {/* Inputs Column */}
         <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">
-            1. Yield &amp; Revenue Assumptions
+            1. {t('calculator.revenueTitle', 'Yield & Revenue Assumptions')}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Crop Selection
+                {t('calculator.cropLabel', 'Select Crop')}
               </label>
               <input
                 type="text"
@@ -77,7 +78,7 @@ const ProfitCalculatorPage = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Cultivated Land (Acres)
+                {t('calculator.landSizeLabel', 'Cultivation Area (Acres)')}
               </label>
               <input
                 type="number"
@@ -91,7 +92,7 @@ const ProfitCalculatorPage = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Expected Yield per Acre (Quintals)
+                {t('calculator.yieldLabel', 'Expected Yield (Quintals/Acre)')}
               </label>
               <input
                 type="number"
@@ -107,7 +108,7 @@ const ProfitCalculatorPage = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Expected Mandi Selling Price (₹ / Quintal)
+                {t('calculator.priceLabel', 'Expected Selling Price (₹/Quintal)')}
               </label>
               <input
                 type="number"
@@ -126,7 +127,7 @@ const ProfitCalculatorPage = () => {
           </div>
 
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100 pt-2">
-            2. Estimated Input Costs (₹)
+            2. {t('calculator.costTitle', 'Total Cultivation Expenses')} (₹)
           </h3>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -203,9 +204,7 @@ const ProfitCalculatorPage = () => {
                 min="0"
                 step="500"
                 value={inputs.otherCost}
-                onChange={(e) =>
-                  setInputs({ ...inputs, otherCost: parseFloat(e.target.value) || 0 })
-                }
+                onChange={(e) => setInputs({ ...inputs, otherCost: parseFloat(e.target.value) || 0 })}
                 className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl"
               />
             </div>
@@ -216,12 +215,12 @@ const ProfitCalculatorPage = () => {
         <div className="space-y-4">
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Financial Summary
+              {t('calculator.title', 'Financial Summary')}
             </h3>
 
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <span className="text-[11px] text-slate-500 uppercase font-semibold">
-                Total Production Yield
+                {t('calculator.yieldLabel', 'Total Production Yield')}
               </span>
               <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
                 {totalYieldQuintals.toFixed(1)} <span className="text-sm font-semibold">Quintals</span>
@@ -230,7 +229,7 @@ const ProfitCalculatorPage = () => {
 
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <span className="text-[11px] text-slate-500 uppercase font-semibold">
-                Gross Anticipated Revenue
+                {t('calculator.revenueTitle', 'Estimated Gross Revenue')}
               </span>
               <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
                 {formatCurrency(grossRevenue)}
@@ -239,7 +238,7 @@ const ProfitCalculatorPage = () => {
 
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <span className="text-[11px] text-slate-500 uppercase font-semibold">
-                Total Cultivation Costs
+                {t('calculator.costTitle', 'Total Cultivation Expenses')}
               </span>
               <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
                 {formatCurrency(totalCost)}
@@ -254,18 +253,18 @@ const ProfitCalculatorPage = () => {
               }`}
             >
               <span className="text-xs font-bold uppercase tracking-wider block opacity-80">
-                Estimated Net Profit
+                {t('calculator.netProfitTitle', 'Estimated Net Profit')}
               </span>
               <div className="text-3xl font-extrabold tracking-tight mt-1">
                 {formatCurrency(netProfit)}
               </div>
               <span className="text-xs font-semibold mt-1 block">
-                Estimated ROI: {roiPercent}%
+                {t('calculator.roiTitle', 'Return on Investment (ROI)')}: {roiPercent}%
               </span>
             </div>
 
             <div className="pt-2 text-xs text-slate-500 flex justify-between">
-              <span>Break-even Mandi Rate:</span>
+              <span>{t('market.currentModalPrice', 'Break-even Rate')}:</span>
               <span className="font-bold text-slate-800">{formatCurrency(breakEvenPrice)} / q</span>
             </div>
           </div>

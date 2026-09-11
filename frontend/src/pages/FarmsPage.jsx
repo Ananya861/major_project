@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useFarm } from '../context/FarmContext';
+import { useTranslation } from '../i18n/LanguageContext';
 import { farmService } from '../services/farmService';
 import AddFarmModal from '../components/forms/AddFarmModal';
 import AddSoilModal from '../components/forms/AddSoilModal';
@@ -20,6 +21,7 @@ import {
 import { formatDate } from '../utils/formatters';
 
 const FarmsPage = () => {
+  const { t } = useTranslation();
   const { farms, loadingFarms, errorFarms, refreshFarms } = useFarm();
   const [selectedFarmDetail, setSelectedFarmDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -66,10 +68,10 @@ const FarmsPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            My Farms &amp; Soil Profiles
+            {t('farms.title', 'My Farms & Soil Health')}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Register your land coordinates and soil test readings to power AI crop recommendations.
+            {t('farms.subtitle', 'Manage farm parcels, GPS coordinates, and historical soil fertility tests')}
           </p>
         </div>
         <button
@@ -77,20 +79,20 @@ const FarmsPage = () => {
           className="inline-flex items-center space-x-2 px-5 py-2.5 bg-agri-600 hover:bg-agri-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
         >
           <Plus className="w-4 h-4" />
-          <span>Register New Farm</span>
+          <span>{t('farms.registerFarmBtn', 'Register New Farm')}</span>
         </button>
       </div>
 
       <ErrorMessage message={errorFarms} onRetry={refreshFarms} />
 
       {loadingFarms ? (
-        <LoadingSpinner message="Loading your registered farms..." />
+        <LoadingSpinner message={t('common.loading', 'Loading your registered farms...')} />
       ) : farms.length === 0 ? (
         <EmptyState
           icon={Tractor}
-          title="No farms registered yet"
-          description="Add your first farm plot with latitude, longitude, and acreage to start generating crop recommendations."
-          actionText="Register New Farm"
+          title={t('farms.emptyFarmsTitle', 'No farms registered yet')}
+          description={t('farms.emptyFarmsDesc', 'Add your first farm plot with latitude, longitude, and acreage to start generating crop recommendations.')}
+          actionText={t('farms.registerFarmBtn', 'Register New Farm')}
           onAction={() => setAddFarmOpen(true)}
         />
       ) : (
@@ -98,7 +100,7 @@ const FarmsPage = () => {
           {/* Farm List Cards */}
           <div className="lg:col-span-1 space-y-3">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
-              Select Farm Plot ({farms.length})
+              {t('farms.farmListTitle', 'Farm Parcels')} ({farms.length})
             </h3>
             <div className="space-y-2">
               {farms.map((farm) => {
@@ -123,11 +125,11 @@ const FarmsPage = () => {
                           <Tractor className="w-4 h-4" />
                         </div>
                         <span className="font-bold text-sm text-slate-800">
-                          Farm #{farm.farm_id}
+                          {t('nav.myFarms', 'Farm')} #{farm.farm_id}
                         </span>
                       </div>
                       <Badge variant={isSelected ? 'primary' : 'neutral'}>
-                        {farm.area_acres} Acres
+                        {farm.area_acres} {t('common.acres', 'Acres')}
                       </Badge>
                     </div>
 
@@ -147,7 +149,7 @@ const FarmsPage = () => {
           <div className="lg:col-span-2">
             {loadingDetail ? (
               <div className="bg-white border border-slate-200 rounded-3xl p-8 flex items-center justify-center">
-                <LoadingSpinner message="Fetching farm profile &amp; soil readings..." />
+                <LoadingSpinner message={t('common.loading', 'Fetching farm profile & soil readings...')} />
               </div>
             ) : selectedFarmDetail ? (
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
@@ -156,13 +158,13 @@ const FarmsPage = () => {
                   <div>
                     <div className="flex items-center space-x-3">
                       <h2 className="text-xl font-bold text-slate-900">
-                        Farm Plot #{selectedFarmDetail.farm_id}
+                        {t('nav.myFarms', 'Farm Plot')} #{selectedFarmDetail.farm_id}
                       </h2>
-                      <Badge variant="success">{selectedFarmDetail.area_acres} Acres</Badge>
+                      <Badge variant="success">{selectedFarmDetail.area_acres} {t('common.acres', 'Acres')}</Badge>
                     </div>
                     <p className="text-xs text-slate-500 mt-1 flex items-center space-x-1.5">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Registered on {formatDate(selectedFarmDetail.created_at)}</span>
+                      <span>{t('farms.recordedAt', 'Registered on')} {formatDate(selectedFarmDetail.created_at)}</span>
                     </p>
                   </div>
 
@@ -172,7 +174,7 @@ const FarmsPage = () => {
                       className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition"
                     >
                       <CloudSun className="w-4 h-4 text-slate-500" />
-                      <span>Weather</span>
+                      <span>{t('nav.weather', 'Weather')}</span>
                     </Link>
 
                     <Link
@@ -180,7 +182,7 @@ const FarmsPage = () => {
                       className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-agri-600 hover:bg-agri-700 text-white text-xs font-semibold rounded-xl shadow-xs transition"
                     >
                       <Sprout className="w-4 h-4" />
-                      <span>Crop AI</span>
+                      <span>{t('nav.cropRecommendation', 'Crop AI')}</span>
                     </Link>
                   </div>
                 </div>
@@ -189,7 +191,7 @@ const FarmsPage = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Latitude
+                      {t('addFarm.latLabel', 'Latitude')}
                     </span>
                     <p className="text-base font-bold text-slate-800 mt-0.5">
                       {selectedFarmDetail.latitude.toFixed(6)}°
@@ -198,7 +200,7 @@ const FarmsPage = () => {
 
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Longitude
+                      {t('addFarm.lonLabel', 'Longitude')}
                     </span>
                     <p className="text-base font-bold text-slate-800 mt-0.5">
                       {selectedFarmDetail.longitude.toFixed(6)}°
@@ -207,10 +209,10 @@ const FarmsPage = () => {
 
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 col-span-2 sm:col-span-1">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Area
+                      {t('addFarm.areaLabel', 'Area')}
                     </span>
                     <p className="text-base font-bold text-slate-800 mt-0.5">
-                      {selectedFarmDetail.area_acres} Acres
+                      {selectedFarmDetail.area_acres} {t('common.acres', 'Acres')}
                     </p>
                   </div>
                 </div>
@@ -221,7 +223,7 @@ const FarmsPage = () => {
                     <div className="flex items-center space-x-2">
                       <FlaskConical className="w-4 h-4 text-agri-600" />
                       <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                        Latest Soil Reading
+                        {t('farms.soilReadingsTitle', 'Latest Soil Reading')}
                       </h3>
                     </div>
                     <button
@@ -229,7 +231,7 @@ const FarmsPage = () => {
                       className="inline-flex items-center space-x-1 text-xs font-semibold text-agri-600 hover:text-agri-700"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>Log Soil Test</span>
+                      <span>{t('farms.addSoilBtn', 'Log Soil Test')}</span>
                     </button>
                   </div>
 
@@ -237,79 +239,79 @@ const FarmsPage = () => {
                     <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 space-y-4">
                       <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-200/60">
                         <span>
-                          Recorded on {formatDate(selectedFarmDetail.latest_soil.recorded_at)}
+                          {t('farms.recordedAt', 'Recorded on')} {formatDate(selectedFarmDetail.latest_soil.recorded_at)}
                         </span>
                         {selectedFarmDetail.latest_soil.soil_type && (
                           <Badge variant="primary">
-                            {selectedFarmDetail.latest_soil.soil_type} Soil
+                            {selectedFarmDetail.latest_soil.soil_type} {t('farms.soilType', 'Soil')}
                           </Badge>
                         )}
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
                         <div className="bg-white p-3 rounded-xl border border-slate-200/60 shadow-xs">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">pH</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">{t('farms.ph', 'pH')}</span>
                           <p className="text-lg font-extrabold text-slate-800">
                             {selectedFarmDetail.latest_soil.ph ?? '--'}
                           </p>
-                          <span className="text-[10px] text-slate-400">Acidity</span>
+                          <span className="text-[10px] text-slate-400">0 - 14</span>
                         </div>
 
                         <div className="bg-white p-3 rounded-xl border border-slate-200/60 shadow-xs">
                           <span className="text-[10px] font-bold text-slate-400 uppercase">
-                            Nitrogen (N)
+                            {t('farms.nitrogen', 'Nitrogen (N)')}
                           </span>
                           <p className="text-lg font-extrabold text-slate-800">
                             {selectedFarmDetail.latest_soil.nitrogen ?? '--'}
                           </p>
-                          <span className="text-[10px] text-slate-400">mg/kg</span>
+                          <span className="text-[10px] text-slate-400">{t('common.kgHa', 'kg/ha')}</span>
                         </div>
 
                         <div className="bg-white p-3 rounded-xl border border-slate-200/60 shadow-xs">
                           <span className="text-[10px] font-bold text-slate-400 uppercase">
-                            Phosphorus (P)
+                            {t('farms.phosphorus', 'Phosphorus (P)')}
                           </span>
                           <p className="text-lg font-extrabold text-slate-800">
                             {selectedFarmDetail.latest_soil.phosphorus ?? '--'}
                           </p>
-                          <span className="text-[10px] text-slate-400">mg/kg</span>
+                          <span className="text-[10px] text-slate-400">{t('common.kgHa', 'kg/ha')}</span>
                         </div>
 
                         <div className="bg-white p-3 rounded-xl border border-slate-200/60 shadow-xs">
                           <span className="text-[10px] font-bold text-slate-400 uppercase">
-                            Potassium (K)
+                            {t('farms.potassium', 'Potassium (K)')}
                           </span>
                           <p className="text-lg font-extrabold text-slate-800">
                             {selectedFarmDetail.latest_soil.potassium ?? '--'}
                           </p>
-                          <span className="text-[10px] text-slate-400">mg/kg</span>
+                          <span className="text-[10px] text-slate-400">{t('common.kgHa', 'kg/ha')}</span>
                         </div>
 
                         <div className="bg-white p-3 rounded-xl border border-slate-200/60 shadow-xs col-span-2 sm:col-span-1">
                           <span className="text-[10px] font-bold text-slate-400 uppercase">
-                            Moisture
+                            {t('farms.moisture', 'Moisture')}
                           </span>
                           <p className="text-lg font-extrabold text-slate-800">
                             {selectedFarmDetail.latest_soil.moisture !== null
                               ? `${selectedFarmDetail.latest_soil.moisture}%`
                               : '--'}
                           </p>
-                          <span className="text-[10px] text-slate-400">Volumetric</span>
+                          <span className="text-[10px] text-slate-400">%</span>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="p-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center">
                       <FlaskConical className="w-7 h-7 text-slate-400 mx-auto mb-1.5" />
-                      <p className="text-xs font-semibold text-slate-700">No soil reading logged yet</p>
+                      <p className="text-xs font-semibold text-slate-700">{t('farms.noSoilData', 'No soil reading logged yet')}</p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Recording nitrogen, phosphorus, potassium, and pH readings enables the AI Crop Recommendation model.
+                        {t('addSoil.guidanceText', 'Recording nitrogen, phosphorus, potassium, and pH readings enables the AI Crop Recommendation model.')}
                       </p>
                       <button
                         onClick={() => handleOpenAddSoil(selectedFarmDetail.farm_id)}
                         className="mt-3 px-4 py-1.5 bg-agri-600 hover:bg-agri-700 text-white text-xs font-semibold rounded-xl shadow-xs transition"
                       >
-                        Add Soil Reading
+                        {t('farms.addSoilBtn', 'Add Soil Reading')}
                       </button>
                     </div>
                   )}

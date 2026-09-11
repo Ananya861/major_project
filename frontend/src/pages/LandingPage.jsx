@@ -12,60 +12,57 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const features = [
-  {
-    icon: Sprout,
-    title: 'Crop Recommendation AI',
-    description:
-      'Advanced Machine Learning model evaluates your soil N-P-K nutrients, pH, moisture, and local weather to recommend the highest-yielding crops.',
-    link: '/crop-recommendation',
-    color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Pan-India Price Prediction',
-    description:
-      'Advanced HistGradientBoostingRegressor machine learning model forecasts mandi modal prices up to 30 days ahead based on historical market trends.',
-    link: '/price-prediction',
-    color: 'bg-blue-50 text-blue-600 border-blue-100',
-  },
-  {
-    icon: Store,
-    title: 'Live Mandi Market Intelligence',
-    description:
-      'Real-time commodity arrivals and modal prices directly from the Government of India data.gov.in Agmarknet gateway with database fallback.',
-    link: '/market-prices',
-    color: 'bg-amber-50 text-amber-600 border-amber-100',
-  },
-  {
-    icon: Scale,
-    title: 'MSP Benchmark Comparison',
-    description:
-      'Instant comparison between actual mandi market prices and official Government Minimum Support Prices (MSP) for Rabi and Kharif crops.',
-    link: '/msp-comparison',
-    color: 'bg-purple-50 text-purple-600 border-purple-100',
-  },
-  {
-    icon: CloudSun,
-    title: 'Agro-Weather Intelligence',
-    description:
-      'Accurate temperature, precipitation, and humidity insights based on farm GPS coordinates powered by OpenWeather integration.',
-    link: '/weather',
-    color: 'bg-sky-50 text-sky-600 border-sky-100',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Automated Price & Weather Alerts',
-    description:
-      'Smart notifications generated whenever daily mandi prices deviate by 5%+ or future forecasts drop below MSP thresholds.',
-    link: '/notifications',
-    color: 'bg-rose-50 text-rose-600 border-rose-100',
-  },
-];
+import { useTranslation } from '../i18n/LanguageContext';
+import LanguageSelector from '../components/common/LanguageSelector';
 
 const LandingPage = () => {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
+
+  const features = [
+    {
+      icon: Sprout,
+      title: t('cropReco.title', 'Crop Recommendation AI'),
+      description: t('cropReco.subtitle', 'Advanced Machine Learning model evaluates your soil N-P-K nutrients, pH, moisture, and local weather to recommend the highest-yielding crops.'),
+      link: '/crop-recommendation',
+      color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    },
+    {
+      icon: TrendingUp,
+      title: t('prediction.title', 'Pan-India Price Prediction'),
+      description: t('prediction.subtitle', 'Advanced HistGradientBoostingRegressor machine learning model forecasts mandi modal prices up to 30 days ahead based on historical market trends.'),
+      link: '/price-prediction',
+      color: 'bg-blue-50 text-blue-600 border-blue-100',
+    },
+    {
+      icon: Store,
+      title: t('market.title', 'Live Mandi Market Intelligence'),
+      description: t('market.subtitle', 'Real-time commodity arrivals and modal prices directly from official Agmarknet gateway with database fallback.'),
+      link: '/market-prices',
+      color: 'bg-amber-50 text-amber-600 border-amber-100',
+    },
+    {
+      icon: Scale,
+      title: t('msp.title', 'MSP Benchmark Comparison'),
+      description: t('msp.subtitle', 'Instant comparison between actual mandi market prices and official Government Minimum Support Prices (MSP) for Rabi and Kharif crops.'),
+      link: '/msp-comparison',
+      color: 'bg-purple-50 text-purple-600 border-purple-100',
+    },
+    {
+      icon: CloudSun,
+      title: t('weather.title', 'Agro-Weather Intelligence'),
+      description: t('weather.subtitle', 'Accurate temperature, precipitation, and humidity insights based on farm GPS coordinates powered by OpenWeather integration.'),
+      link: '/weather',
+      color: 'bg-sky-50 text-sky-600 border-sky-100',
+    },
+    {
+      icon: ShieldCheck,
+      title: t('notifications.title', 'Automated Price & Weather Alerts'),
+      description: t('notifications.subtitle', 'Smart notifications generated whenever daily mandi prices deviate by 5%+ or future forecasts drop below MSP thresholds.'),
+      link: '/notifications',
+      color: 'bg-rose-50 text-rose-600 border-rose-100',
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -77,20 +74,22 @@ const LandingPage = () => {
               <Sprout className="w-6 h-6" />
             </div>
             <div>
-              <span className="font-bold text-slate-900 tracking-tight text-lg">AGRI SMART</span>
+              <span className="font-bold text-slate-900 tracking-tight text-lg">{t('nav.brand', 'AGRI SMART')}</span>
               <span className="text-xs font-semibold text-agri-600 ml-1.5 px-1.5 py-0.5 bg-agri-50 rounded-md border border-agri-200">
-                AI
+                {t('nav.aiBadge', 'AI')}
               </span>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
+            <LanguageSelector />
+
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
                 className="inline-flex items-center space-x-2 px-5 py-2.5 bg-agri-600 hover:bg-agri-700 text-white text-sm font-semibold rounded-xl shadow-sm transition"
               >
-                <span>Go to Dashboard</span>
+                <span>{t('nav.dashboard', 'Go to Dashboard')}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             ) : (
@@ -99,13 +98,13 @@ const LandingPage = () => {
                   to="/login"
                   className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-agri-700 transition"
                 >
-                  Sign In
+                  {t('auth.submitLogin', 'Sign In')}
                 </Link>
                 <Link
                   to="/register"
                   className="inline-flex items-center space-x-2 px-5 py-2.5 bg-agri-600 hover:bg-agri-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-agri-600/20 transition"
                 >
-                  <span>Get Started</span>
+                  <span>{t('auth.registerNow', 'Get Started')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </>
@@ -141,7 +140,7 @@ const LandingPage = () => {
               to={isAuthenticated ? '/dashboard' : '/register'}
               className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-8 py-3.5 bg-agri-600 hover:bg-agri-700 text-white text-base font-semibold rounded-2xl shadow-md shadow-agri-600/30 transition transform hover:-translate-y-0.5"
             >
-              <span>{isAuthenticated ? 'Open Dashboard' : 'Get Started Free'}</span>
+              <span>{isAuthenticated ? t('nav.dashboard', 'Open Dashboard') : t('auth.registerNow', 'Get Started Free')}</span>
               <ArrowRight className="w-5 h-5" />
             </Link>
 
@@ -149,7 +148,7 @@ const LandingPage = () => {
               to="/market-prices"
               className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-7 py-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-base font-semibold rounded-2xl shadow-xs transition"
             >
-              <span>Explore Live Market Prices</span>
+              <span>{t('market.title', 'Explore Live Market Prices')}</span>
             </Link>
           </div>
 
@@ -157,15 +156,15 @@ const LandingPage = () => {
           <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-semibold text-slate-500">
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-agri-600" />
-              <span>Govt. of India Mandi Data (Agmarknet)</span>
+              <span>{t('market.liveBadge', 'Govt. of India Mandi Data (Agmarknet)')}</span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-agri-600" />
-              <span>Machine Learning Crop Recommendation</span>
+              <span>{t('cropReco.title', 'Machine Learning Crop Recommendation')}</span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-agri-600" />
-              <span>HistGradientBoosting Price Forecasting</span>
+              <span>{t('prediction.title', 'HistGradientBoosting Price Forecasting')}</span>
             </div>
           </div>
         </div>
@@ -175,10 +174,10 @@ const LandingPage = () => {
       <section className="py-20 max-w-7xl mx-auto px-6 flex-1">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-xs font-bold text-agri-600 uppercase tracking-widest mb-2">
-            INTEGRATED PLATFORM MODULES
+            {t('nav.mainSection', 'INTEGRATED PLATFORM MODULES')}
           </h2>
           <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Comprehensive Decision Support for Modern Agriculture
+            {t('footer.platformTitle', 'Comprehensive Decision Support for Modern Agriculture')}
           </p>
         </div>
 
@@ -202,7 +201,7 @@ const LandingPage = () => {
                     to={item.link}
                     className="inline-flex items-center space-x-1.5 text-xs font-bold text-agri-600 hover:text-agri-700 transition"
                   >
-                    <span>Launch Feature</span>
+                    <span>{t('common.view', 'Launch Feature')}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -217,11 +216,11 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <Sprout className="w-4 h-4 text-agri-600" />
-            <span className="font-bold text-slate-800">AGRI SMART AI</span>
-            <span>— Smart Farming Decision Support Platform</span>
+            <span className="font-bold text-slate-800">{t('nav.brand', 'AGRI SMART')} AI</span>
+            <span>— {t('footer.platformTitle', 'Smart Farming Decision Support Platform')}</span>
           </div>
           <p className="text-slate-400">
-            &copy; {new Date().getFullYear()} AgriSmart AI. All rights reserved.
+            {t('footer.copyright', '© 2026 AgriSmart AI. All rights reserved.')}
           </p>
         </div>
       </footer>

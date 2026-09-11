@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n/LanguageContext';
 import Badge from '../components/common/Badge';
 import {
   User,
@@ -14,15 +15,18 @@ import {
 import { formatDate } from '../utils/formatters';
 
 const ProfilePage = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Farmer Profile</h1>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          {t('profile.title', 'Farmer Profile & Account Settings')}
+        </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Your registered farmer account and regional agricultural details.
+          {t('profile.subtitle', 'View your registration details, primary farm coordinates, and regional language preferences.')}
         </p>
       </div>
 
@@ -36,14 +40,14 @@ const ProfilePage = () => {
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-xl font-bold text-slate-900">{user?.name}</h2>
-                <Badge variant="success">Verified Farmer</Badge>
+                <Badge variant="success">{t('auth.registerTitle', 'Verified Farmer')}</Badge>
               </div>
               <p className="text-xs text-slate-500 mt-1 flex items-center space-x-1.5">
                 <Phone className="w-3.5 h-3.5 text-slate-400" />
                 <span>{user?.phone}</span>
                 <span>•</span>
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>Member since {formatDate(user?.created_at)}</span>
+                <span>{t('farms.recordedAt', 'Member since')} {formatDate(user?.created_at)}</span>
               </p>
             </div>
           </div>
@@ -55,7 +59,7 @@ const ProfilePage = () => {
             <MapPin className="w-5 h-5 text-agri-600 shrink-0 mt-0.5" />
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Geographic Location
+                {t('profile.location', 'Registered Village & State')}
               </span>
               <p className="text-sm font-semibold text-slate-800 mt-0.5">
                 {user?.village ? `${user.village}, ` : ''}
@@ -69,10 +73,10 @@ const ProfilePage = () => {
             <Tractor className="w-5 h-5 text-agri-600 shrink-0 mt-0.5" />
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Total Land Size
+                {t('auth.landSizeLabel', 'Total Land Size (Acres)')}
               </span>
               <p className="text-sm font-semibold text-slate-800 mt-0.5">
-                {user?.land_size_acres ? `${user.land_size_acres} Acres` : 'Not Specified'}
+                {user?.land_size_acres ? `${user.land_size_acres} ${t('common.acres', 'Acres')}` : 'Not Specified'}
               </p>
             </div>
           </div>
@@ -81,7 +85,7 @@ const ProfilePage = () => {
             <Layers className="w-5 h-5 text-agri-600 shrink-0 mt-0.5" />
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Farmer Category
+                {t('profile.category', 'Category')}
               </span>
               <p className="text-sm font-semibold text-slate-800 mt-0.5">
                 {user?.category || 'General Farmer'}
@@ -93,7 +97,7 @@ const ProfilePage = () => {
             <Languages className="w-5 h-5 text-agri-600 shrink-0 mt-0.5" />
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Preferred Advisory Language
+                {t('profile.languagePrefTitle', 'Regional Language Preference')}
               </span>
               <p className="text-sm font-semibold text-slate-800 mt-0.5">
                 {user?.preferred_language || 'English'}
@@ -106,9 +110,9 @@ const ProfilePage = () => {
         <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/70 flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center space-x-2">
             <Shield className="w-4 h-4 text-emerald-600" />
-            <span>FastAPI JWT Authentication Active (60-minute token validity)</span>
+            <span>FastAPI JWT Authentication Active</span>
           </div>
-          <span>Farmer ID: #{user?.farmer_id}</span>
+          <span>ID: #{user?.farmer_id}</span>
         </div>
       </div>
     </div>

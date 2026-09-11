@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from '../i18n/LanguageContext';
 import { notificationService } from '../services/notificationService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -19,6 +20,7 @@ import {
 import { formatDateTime } from '../utils/formatters';
 
 const NotificationsPage = () => {
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -95,10 +97,10 @@ const NotificationsPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Notifications &amp; Alerts
+            {t('notifications.title', 'Farmer Notifications & Alerts')}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Automated alerts triggered by mandi price shifts (&ge; 5%), MSP divergence, or extreme weather.
+            {t('notifications.subtitle', 'Critical alerts regarding market price shifts, weather hazards, and MSP notifications.')}
           </p>
         </div>
 
@@ -112,7 +114,7 @@ const NotificationsPage = () => {
           ) : (
             <ShieldCheck className="w-4 h-4" />
           )}
-          <span>{checkingAlerts ? 'Scanning Alerts...' : 'Scan Now For Alerts'}</span>
+          <span>{checkingAlerts ? t('common.loading', 'Scanning Alerts...') : t('notifications.title', 'Scan Alerts')}</span>
         </button>
       </div>
 
@@ -126,7 +128,7 @@ const NotificationsPage = () => {
             onClick={() => setActionMessage(null)}
             className="text-xs font-semibold text-emerald-700 hover:text-emerald-900"
           >
-            Dismiss
+            {t('common.close', 'Dismiss')}
           </button>
         </div>
       )}
@@ -143,7 +145,7 @@ const NotificationsPage = () => {
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          All Notifications ({notifications.length})
+          {t('common.all', 'All')} ({notifications.length})
         </button>
         <button
           onClick={() => setFilter('unread')}
@@ -153,19 +155,19 @@ const NotificationsPage = () => {
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          Unread ({notifications.filter((n) => !n.is_read).length})
+          {t('common.status', 'Unread')} ({notifications.filter((n) => !n.is_read).length})
         </button>
       </div>
 
       {/* Content */}
       {loading ? (
-        <LoadingSpinner message="Loading notifications..." />
+        <LoadingSpinner message={t('common.loading', 'Loading notifications...')} />
       ) : filteredNotifications.length === 0 ? (
         <EmptyState
           icon={Bell}
-          title={filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
-          description="Your notifications regarding price updates and weather warnings will appear here."
-          actionText="Run Price &amp; Weather Scan"
+          title={filter === 'unread' ? t('notifications.emptyTitle', 'No unread notifications') : t('notifications.emptyTitle', 'All Caught Up')}
+          description={t('notifications.emptyDesc', 'You have no unread notifications or price alerts at this moment.')}
+          actionText={t('notifications.title', 'Scan Alerts')}
           onAction={handleTriggerAlertCheck}
         />
       ) : (
@@ -191,7 +193,7 @@ const NotificationsPage = () => {
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Badge variant={notif.is_read ? 'neutral' : 'primary'}>
-                      {notif.type || 'ALERT'}
+                      {notif.type === 'PRICE_ALERT' ? t('notifications.priceAlertBadge', 'Market Alert') : notif.type === 'WEATHER_ALERT' ? t('notifications.weatherAlertBadge', 'Weather Alert') : notif.type || 'ALERT'}
                     </Badge>
                     <span className="text-[11px] text-slate-400 flex items-center space-x-1">
                       <Clock className="w-3 h-3" />
@@ -210,7 +212,7 @@ const NotificationsPage = () => {
                   title="Mark as read"
                 >
                   <CheckCheck className="w-4 h-4" />
-                  <span className="hidden sm:inline">Mark Read</span>
+                  <span className="hidden sm:inline">{t('notifications.markAllRead', 'Mark Read')}</span>
                 </button>
               )}
             </div>
