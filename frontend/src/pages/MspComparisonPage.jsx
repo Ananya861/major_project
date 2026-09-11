@@ -14,16 +14,41 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Search,
+  MapPin,
+  Info,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
+
+const MSP_SUPPORTED_CROPS = new Set([
+  'wheat',
+  'maize',
+  'soyabean',
+  'groundnut',
+  'rice',
+  'paddy',
+  'paddy(common)',
+  'mustard',
+  'chickpea',
+  'bengal gram',
+  'mungbean',
+  'green gram',
+  'blackgram',
+  'cotton',
+  'pigeonpeas',
+  'lentil',
+  'jute',
+]);
 
 const MspComparisonPage = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
+  const [states, setStates] = useState([]);
+  const [selectedState, setSelectedState] = useState('');
   const [crops, setCrops] = useState([]);
   const [markets, setMarkets] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const [loadingMarkets, setLoadingMarkets] = useState(false);
 
   const [selectedCropId, setSelectedCropId] = useState('');
   const [selectedMarketId, setSelectedMarketId] = useState('');
@@ -65,10 +90,9 @@ const MspComparisonPage = () => {
 
     try {
       const data = await marketService.getMspComparison(cropIdToUse, marketIdToUse);
-      // Handles both single object and array response (response.data[0])
       const mspRecord = Array.isArray(data) ? data[0] : data;
       if (!mspRecord || mspRecord.modal_price === undefined) {
-        setError('No market price data available');
+        setError('No mandi price data available for this crop and market.');
         setMspData(null);
       } else {
         setMspData(mspRecord);
@@ -76,7 +100,7 @@ const MspComparisonPage = () => {
     } catch (err) {
       setError(
         err.friendlyMessage ||
-          'MSP comparison data is currently unavailable for this crop. Note: MSP benchmarks are configured for Wheat, Maize, Groundnut, and Soyabean.'
+          'No mandi price data available for this crop and market.'
       );
       setMspData(null);
     } finally {
@@ -93,15 +117,17 @@ const MspComparisonPage = () => {
     const loadCatalog = async () => {
       setLoadingCatalog(true);
       try {
-        const [cropsData, marketsData] = await Promise.all([
+        const [cropsData, marketsData, statesData] = await Promise.all([
           catalogService.getCrops(),
           catalogService.getMarkets(),
+          catalogService.getStates(),
         ]);
         if (isMounted) {
           setCrops(cropsData);
           setMarkets(marketsData);
+          setStates(statesData || []);
 
-          // Find preferred initial crop (Wheat if available since it has MSP support, or first crop)
+          // Preferred default: Wheat (has verified MSP)
           const wheatCrop = cropsData.find((c) => c.name?.toLowerCase() === 'wheat');
           const defaultCrop = wheatCrop || cropsData[0];
 
@@ -110,6 +136,13 @@ const MspComparisonPage = () => {
 
           setSelectedCropId((prev) => cropParam || prev || initialCropId);
           setSelectedMarketId((prev) => marketParam || prev || initialMarketId);
+
+          if (marketParam) {
+            const foundMarket = marketsData.find((m) => String(m.market_id) === String(marketParam));
+            if (foundMarket?.state) {
+              setSelectedState(foundMarket.state);
+            }
+          }
 
           if (initialCropId && initialMarketId && !initialCompareDone.current) {
             initialCompareDone.current = true;
@@ -128,6 +161,30 @@ const MspComparisonPage = () => {
     };
   }, [cropParam, marketParam, handleCompare]);
 
+  // Handle state change
+  const handleStateChange = async (newState) => {
+    setSelectedState(newState);
+    setLoadingMarkets(true);
+    try {
+      const filteredMarkets = await catalogService.getMarkets(newState);
+      setMarkets(filteredMarkets);
+      if (filteredMarkets.length > 0) {
+        const currentStillExists = filteredMarkets.some(
+          (m) => String(m.market_id) === String(selectedMarketId)
+        );
+        if (!currentStillExists) {
+          setSelectedMarketId(String(filteredMarkets[0].market_id));
+        }
+      } else {
+        setSelectedMarketId('');
+      }
+    } catch (err) {
+      console.error('Failed to filter markets by state:', err);
+    } finally {
+      setLoadingMarkets(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     if (status === 'ABOVE_MSP') {
       return (
@@ -143,6 +200,13 @@ const MspComparisonPage = () => {
         </Badge>
       );
     }
+    if (status === 'NOT_APPLICABLE') {
+      return (
+        <Badge variant="neutral" className="text-xs px-3 py-1">
+          Market Driven (No Statutory MSP)
+        </Badge>
+      );
+    }
     return (
       <Badge variant="neutral" className="text-xs px-3 py-1">
         {t('msp.statusAtMsp', 'At Par with MSP')}
@@ -154,9 +218,15 @@ const MspComparisonPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="inline-flex items-center space-x-2 text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200 mb-2">
-          <Scale className="w-3.5 h-3.5 text-purple-600" />
-          <span>{t('msp.benchmarkBadge', 'Government Price Floor Benchmark')}</span>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="inline-flex items-center space-x-2 text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+            <Scale className="w-3.5 h-3.5 text-purple-600" />
+            <span>{t('msp.benchmarkBadge', 'Government Price Floor Benchmark')}</span>
+          </div>
+          <div className="inline-flex items-center space-x-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+            <MapPin className="w-3.5 h-3.5 text-slate-500" />
+            <span>Pan-India Mandi Network ({markets.length} Markets)</span>
+          </div>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           {t('msp.title', 'MSP Comparison & Fair Price Analysis')}
@@ -172,7 +242,27 @@ const MspComparisonPage = () => {
         <div className="space-y-6">
           {/* Controls Bar */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              {/* State Filter */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  {t('market.stateLabel', 'State / Region')}
+                </label>
+                <select
+                  value={selectedState}
+                  onChange={(e) => handleStateChange(e.target.value)}
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                >
+                  <option value="">{t('market.allStates', 'All States / Pan-India')}</option>
+                  {states.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Commodity */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   {t('market.commodityLabel', 'Commodity')}
@@ -180,37 +270,43 @@ const MspComparisonPage = () => {
                 <select
                   value={selectedCropId}
                   onChange={(e) => setSelectedCropId(e.target.value)}
-                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-slate-50/50"
                 >
-                  {crops.map((c) => (
-                    <option key={c.crop_id} value={String(c.crop_id)}>
-                      {c.name}
-                    </option>
-                  ))}
+                  {crops.map((c) => {
+                    const hasMsp = MSP_SUPPORTED_CROPS.has(c.name.toLowerCase());
+                    return (
+                      <option key={c.crop_id} value={String(c.crop_id)}>
+                        {c.name} {hasMsp ? '★ (Govt MSP)' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
+              {/* Mandi Market */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  {t('market.marketLabel', 'Mandi Market')}
+                  {t('market.marketLabel', 'Mandi Market')} {loadingMarkets ? '...' : `(${markets.length})`}
                 </label>
                 <select
                   value={selectedMarketId}
                   onChange={(e) => setSelectedMarketId(e.target.value)}
-                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                  disabled={loadingMarkets || markets.length === 0}
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-slate-50/50 disabled:opacity-50"
                 >
                   {markets.map((m) => (
                     <option key={m.market_id} value={String(m.market_id)}>
-                      {m.name} {m.district ? `(${m.district})` : ''}
+                      {m.name} {m.district ? `(${m.district}, ${m.state})` : (m.state ? `(${m.state})` : '')}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Action Button */}
               <div>
                 <button
                   onClick={() => handleCompare(selectedCropId, selectedMarketId)}
-                  disabled={loadingMsp}
+                  disabled={loadingMsp || !selectedMarketId}
                   className="w-full py-3 px-5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-2xl shadow-sm shadow-purple-600/20 transition flex items-center justify-center space-x-2 disabled:opacity-50"
                 >
                   {loadingMsp ? (
@@ -230,7 +326,7 @@ const MspComparisonPage = () => {
             <div className="py-12 bg-white rounded-3xl border border-slate-200/80">
               <LoadingSpinner
                 size="lg"
-                message="Retrieving latest market price &amp; matching with official MSP benchmarks..."
+                message="Retrieving latest market price & matching with official MSP benchmarks..."
               />
             </div>
           )}
@@ -248,7 +344,7 @@ const MspComparisonPage = () => {
                   </div>
                   <p className="text-xs text-slate-500 mt-1 flex items-center space-x-1.5">
                     <span>
-                      {mspData.market} Mandi, {mspData.district} ({mspData.state})
+                      {mspData.market} Mandi{mspData.district ? `, ${mspData.district}` : ''} ({mspData.state})
                     </span>
                     <span>•</span>
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -257,8 +353,8 @@ const MspComparisonPage = () => {
                 </div>
 
                 <div className="text-xs text-slate-500 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-100">
-                  <span className="font-semibold text-slate-700">{mspData.season}</span> •{' '}
-                  <span>{mspData.marketing_year}</span>
+                  <span className="font-semibold text-slate-700">{mspData.season || 'Standard'}</span> •{' '}
+                  <span>{mspData.marketing_year || '2026-27'}</span>
                 </div>
               </div>
 
@@ -284,15 +380,21 @@ const MspComparisonPage = () => {
                     <Badge variant="neutral">{t('msp.benchmarkBadge', 'Benchmark')}</Badge>
                   </div>
                   <div className="text-3xl font-extrabold text-purple-900 tracking-tight">
-                    {formatCurrency(mspData.msp)}
+                    {mspData.msp !== null && mspData.msp !== undefined
+                      ? formatCurrency(mspData.msp)
+                      : 'N/A (Market Driven)'}
                   </div>
-                  <span className="text-xs text-purple-600 mt-1 block">{t('market.perQuintal', 'per Quintal')}</span>
+                  <span className="text-xs text-purple-600 mt-1 block">
+                    {mspData.msp ? t('market.perQuintal', 'per Quintal') : 'No statutory price floor'}
+                  </span>
                 </div>
 
                 {/* Price Difference */}
                 <div
                   className={`p-6 rounded-2xl border ${
-                    mspData.difference >= 0
+                    mspData.status === 'NOT_APPLICABLE'
+                      ? 'bg-slate-50 border-slate-200 text-slate-800'
+                      : mspData.difference >= 0
                       ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
                       : 'bg-rose-50/60 border-rose-200 text-rose-900'
                   }`}
@@ -301,19 +403,23 @@ const MspComparisonPage = () => {
                     {t('msp.differenceVsMsp', 'Difference vs MSP')}
                   </span>
                   <div className="text-3xl font-extrabold tracking-tight flex items-center space-x-1">
-                    {mspData.difference >= 0 ? (
+                    {mspData.status === 'NOT_APPLICABLE' ? (
+                      <Info className="w-7 h-7 text-slate-500" />
+                    ) : mspData.difference >= 0 ? (
                       <ArrowUpRight className="w-7 h-7 text-emerald-600" />
                     ) : (
                       <ArrowDownRight className="w-7 h-7 text-rose-600" />
                     )}
                     <span>
-                      {mspData.difference >= 0 ? '+' : ''}
-                      {formatCurrency(mspData.difference)}
+                      {mspData.status === 'NOT_APPLICABLE'
+                        ? 'Market Open'
+                        : `${mspData.difference >= 0 ? '+' : ''}${formatCurrency(mspData.difference)}`}
                     </span>
                   </div>
                   <span className="text-xs font-semibold mt-1 block">
-                    {mspData.difference >= 0 ? '+' : ''}
-                    {mspData.difference_percent}%
+                    {mspData.status === 'NOT_APPLICABLE'
+                      ? 'Demand & Supply Driven'
+                      : `${mspData.difference >= 0 ? '+' : ''}${mspData.difference_percent}%`}
                   </span>
                 </div>
               </div>
@@ -323,8 +429,10 @@ const MspComparisonPage = () => {
                 <div className="flex items-center space-x-2 font-bold text-slate-900 mb-1">
                   {mspData.status === 'ABOVE_MSP' ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  ) : (
+                  ) : mspData.status === 'BELOW_MSP' ? (
                     <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  ) : (
+                    <Info className="w-4 h-4 text-blue-500" />
                   )}
                   <span>{t('cropReco.plantingAdvisoryTitle', 'Farmer Advisory Insight')}</span>
                 </div>
@@ -332,9 +440,13 @@ const MspComparisonPage = () => {
                   <p>
                     {t('msp.favorableNotice', 'Market conditions are favorable. Current modal price is above the government floor rate.')}
                   </p>
-                ) : (
+                ) : mspData.status === 'BELOW_MSP' ? (
                   <p>
                     {t('msp.distressNotice', 'Warning: Market rate is currently below MSP. Farmers are advised to sell via government procurement centers.')}
+                  </p>
+                ) : (
+                  <p>
+                    This commodity is traded on open market prices without statutory government MSP procurement. Farmers should time their harvest sales by tracking daily arrival volumes and local demand.
                   </p>
                 )}
               </div>

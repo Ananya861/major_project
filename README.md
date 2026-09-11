@@ -113,6 +113,29 @@ All features listed below are fully implemented and verified within the reposito
   - Interactive price trend visualizations using Recharts.
   - Built-in Agricultural Profit Calculator estimating production costs, projected crop yields, and expected net revenue.
 
+- **Complete Regional Language Support (8 Indian Languages):**
+  - Full end-to-end localized experience supporting exactly 8 languages:
+    - **English** (`en`)
+    - **Kannada (ಕನ್ನಡ)** (`kn`)
+    - **Hindi (हिन्दी)** (`hi`)
+    - **Telugu (తెలుగు)** (`te`)
+    - **Tamil (தமிழ்)** (`ta`)
+    - **Malayalam (മലയാളം)** (`ml`)
+    - **Marathi (मराठी)** (`mr`)
+    - **Bengali (বাংলা)** (`bn`)
+  - Global Language Selector with native script typography and real-time instant switching.
+  - Persistent language preference saved in browser `localStorage` (`agri_lang`), retaining the user's choice across page reloads and sessions.
+  - Entire user-facing UI changes according to the selected language—including Landing Page, Login, Registration, Dashboard, My Farms, Add Farm & Soil Modals, Crop Recommendation, Weather, MSP Comparison, Market Prices, Price Prediction, Profit Calculator, Notifications, Profile, and Help.
+  - Integrated Google Noto Sans Indian fonts ensuring crisp native script typography without horizontal overflow or clipped glyphs.
+
+- **Multilingual Farm-Context-Aware AI Assistant:**
+  - Persistent floating AI Assistant widget accessible from any page throughout the application.
+  - Automatically synchronizes with the user's currently selected regional language.
+  - Understands farmer inquiries and responds fluently in any of the 8 supported regional languages.
+  - Farm-context-aware intelligence automatically detecting active farm parameters (selected farm name, soil NPK, pH, moisture, live weather, mandi market prices, and MSP benchmarks) to provide tailored agronomic answers.
+  - General farming assistance and actionable advice on crop suitability, fertilizer dosages, soil conditioning, irrigation planning, pest & disease precautions, and market selling decisions.
+  - Dynamic localized quick-prompt chips for one-tap farmer inquiries in the active language.
+
 ---
 
 ## 4. System Architecture
@@ -135,7 +158,9 @@ flowchart TD
         RecoRoute["Recommendation Routes (/recommend)"]
         NotifRoute["Notification Routes (/notifications)"]
         WeatherRoute["Weather Routes (/weather)"]
+        AssistantRoute["Assistant Routes (/assistant)"]
         Orchestration["Central Orchestration Engine\n(app.services.orchestration)"]
+        AssistantEngine["Multilingual Assistant Engine\n(assistant_service.py)"]
     end
 
     subgraph Adapters["Model Adapter Layer"]
@@ -165,11 +190,13 @@ flowchart TD
     Router --> RecoRoute
     Router --> NotifRoute
     Router --> WeatherRoute
+    Router --> AssistantRoute
 
     FarmRoute --> Orchestration
     MarketRoute --> Orchestration
     RecoRoute --> Orchestration
     NotifRoute --> Orchestration
+    AssistantRoute --> AssistantEngine
 
     Orchestration --> CropAdapter
     Orchestration --> PriceAdapter
@@ -189,6 +216,7 @@ flowchart TD
 1. **Decoupled Model Adapters:** Machine learning models are isolated behind dedicated adapter modules (`crop_model_adapter.py` and `price_model_adapter.py`). Changes to training pipelines or serialization formats do not affect backend business logic.
 2. **Asynchronous I/O:** The backend utilizes FastAPI and `asyncpg` with SQLAlchemy 2.0 for non-blocking database queries and external HTTP requests (`httpx`).
 3. **Resilient Data Caching:** Real-time weather responses are cached in the PostgreSQL `weather_log` table for 3 hours per coordinate cluster (~100m precision). Market prices queried from Agmarknet are similarly preserved locally, ensuring system reliability during external API downtimes.
+4. **Multilingual Context-Aware AI Engine:** An extensible assistant architecture (`assistant_service.py`) that processes agricultural queries across 8 regional languages, extracts intent, and formulates localized agronomic guidance by evaluating active farm, soil, weather, and market parameters.
 
 ---
 
@@ -231,6 +259,7 @@ major_project/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── routes/                  # Modular API route controllers
+│   │   │   │   ├── assistant.py         # Multilingual AI assistant chat & suggestions
 │   │   │   │   ├── auth.py              # Farmer registration, login, and profile
 │   │   │   │   ├── catalog.py           # Crop and market reference catalogs
 │   │   │   │   ├── farms.py             # Farm profile and soil reading management
@@ -259,6 +288,7 @@ major_project/
 │   │   │   ├── notification.py          # Notification entity and NotificationType enum
 │   │   │   └── weather.py               # WeatherLog model for 3-hour caching
 │   │   ├── schemas/                     # Pydantic request/response schemas
+│   │   │   ├── assistant.py             # Multilingual AI assistant schemas
 │   │   │   ├── auth.py                  # Authentication schemas
 │   │   │   ├── farm.py                  # Farm and soil data schemas
 │   │   │   ├── market.py                # Market price and prediction schemas
@@ -270,6 +300,7 @@ major_project/
 │   │   │   │   ├── price_model_adapter.py
 │   │   │   │   └── exceptions.py
 │   │   │   ├── alerts.py                # Price and MSP alert evaluation logic
+│   │   │   ├── assistant_service.py     # Multilingual NLP intent & advisory engine
 │   │   │   ├── mandi_service.py         # Agmarknet (data.gov.in) API client
 │   │   │   ├── orchestration.py         # Central farm/soil/weather/ML coordinator
 │   │   │   └── weather_service.py       # OpenWeatherMap client with DB cache
@@ -292,11 +323,27 @@ major_project/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/                  # Reusable UI component modules
+│   │   │   ├── assistant/               # Multilingual AI Assistant widget
+│   │   │   │   └── AiAssistant.jsx      # Context-aware chat drawer & suggestions
 │   │   │   ├── common/                  # Navbar, Sidebar, Badges, Modals, StatCards
+│   │   │   │   └── LanguageSelector.jsx # 8-language dropdown selector
 │   │   │   └── forms/                   # AddFarmModal, AddSoilModal
 │   │   ├── context/                     # React state contexts
 │   │   │   ├── AuthContext.jsx          # JWT authentication and user session state
 │   │   │   └── FarmContext.jsx          # Active farm selection and farm state
+│   │   ├── i18n/                        # Internationalization (i18n) modules
+│   │   │   ├── LanguageContext.jsx      # Language state provider & useTranslation hook
+│   │   │   ├── languages.js             # 8 supported language definitions
+│   │   │   └── translations/            # Localization dictionary files
+│   │   │       ├── en.js                # English translation dictionary
+│   │   │       ├── kn.js                # Kannada (ಕನ್ನಡ) translation dictionary
+│   │   │       ├── hi.js                # Hindi (हिन्दी) translation dictionary
+│   │   │       ├── te.js                # Telugu (తెలుగు) translation dictionary
+│   │   │       ├── ta.js                # Tamil (தமிழ்) translation dictionary
+│   │   │       ├── ml.js                # Malayalam (മലയാളം) translation dictionary
+│   │   │       ├── mr.js                # Marathi (मराठी) translation dictionary
+│   │   │       ├── bn.js                # Bengali (বাংলা) translation dictionary
+│   │   │       └── index.js             # Translation dictionary aggregator
 │   │   ├── layouts/                     # Master page layouts
 │   │   │   ├── AuthLayout.jsx           # Clean layout for login and registration
 │   │   │   └── MainLayout.jsx           # Dashboard shell with sidebar and top header
@@ -319,6 +366,7 @@ major_project/
 │   │   │   └── WeatherPage.jsx          # Agro-climatic weather dashboard
 │   │   ├── services/                    # Axios API client services
 │   │   │   ├── api.js                   # Axios instance, baseURL, interceptors
+│   │   │   ├── assistantService.js      # Multilingual AI assistant API bindings
 │   │   │   ├── authService.js           # Auth endpoint bindings
 │   │   │   ├── catalogService.js        # Crops and markets catalog bindings
 │   │   │   ├── farmService.js           # Farm and soil data bindings
@@ -417,6 +465,9 @@ The backend exposes a fully documented RESTful API built with FastAPI. Interacti
 | **Notifications** | `GET` | `/notifications` | Yes | List stored price and market notifications for the farmer |
 | **Notifications** | `POST` | `/notifications/check-alerts` | Yes | Run price volatility and MSP alert detection logic |
 | **Notifications** | `PATCH`| `/notifications/{notif_id}/read`| Yes | Mark a specific notification as read |
+| **AI Assistant** | `POST` | `/assistant/chat` | No | Generate context-aware agricultural advice in selected regional language |
+| **AI Assistant** | `GET` | `/assistant/languages` | No | Return supported regional languages dictionary |
+| **AI Assistant** | `GET` | `/assistant/suggestions` | No | Return localized quick-start suggestions in requested language |
 
 ---
 

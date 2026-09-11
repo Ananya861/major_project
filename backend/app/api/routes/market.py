@@ -24,7 +24,7 @@ router = APIRouter(
 
 MSP_DATA_PATH = Path(__file__).resolve().parents[3] / "ml" / "data" / "msp_prices.json"
 with MSP_DATA_PATH.open("r", encoding="utf-8") as f:
-    MSP_PRICES = {item["commodity"]: item for item in json.load(f)}
+    MSP_PRICES = {item["commodity"].lower(): item for item in json.load(f)}
 
 
 @router.get("/prices", response_model=list[MarketPriceOut])
@@ -234,6 +234,18 @@ async def predict_market_price(
     )
 
 
+MSP_CROP_ALIASES: dict[str, str] = {
+    "chickpea": "bengal gram(gram)(whole)",
+    "mungbean": "green gram(moong)(whole)",
+    "paddy": "paddy(common)",
+    "soybean": "soyabean",
+    "urad": "blackgram",
+    "tur": "pigeonpeas",
+    "arhar": "pigeonpeas",
+    "masur": "lentil",
+}
+
+
 @router.get("/msp")
 async def get_msp_comparison(
     crop_id: int = Query(...),
@@ -262,14 +274,13 @@ async def get_msp_comparison(
             detail="Market not found",
         )
 
-    msp = MSP_PRICES.get(crop.name)
+    # 1. Resolve MSP for the crop
+    crop_key = crop.name.lower().strip()
+    msp = MSP_PRICES.get(crop_key)
+    if msp is None and crop_key in MSP_CROP_ALIASES:
+        msp = MSP_PRICES.get(MSP_CROP_ALIASES[crop_key].lower())
 
-    if msp is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"MSP data is not available for {crop.name}",
-        )
-
+    # 2. Check cached market price in database
     latest_result = await db.execute(
         select(MarketPrice)
         .where(
@@ -278,32 +289,82 @@ async def get_msp_comparison(
         )
         .order_by(MarketPrice.date.desc())
     )
-
     latest_price = latest_result.scalars().first()
 
+    # 3. If price is not cached or is stale, attempt to fetch live from data.gov.in
+    today = date.today()
+    if latest_price is None or latest_price.date != today:
+        try:
+            live_records = await get_mandi_prices(
+                crop_name=crop.name,
+                market_name=market.name,
+                state_name=market.state,
+                district_name=market.district,
+            )
+            if live_records:
+                chosen = next(
+                    (r for r in live_records if r.get("date") == today),
+                    live_records[0],
+                )
+                arrival_date = chosen.get("date") or today
+                min_p = chosen.get("min_price")
+                max_p = chosen.get("max_price")
+                modal_p = chosen.get("modal_price")
+
+                existing_result = await db.execute(
+                    select(MarketPrice).where(
+                        MarketPrice.crop_id == crop_id,
+                        MarketPrice.market_id == market_id,
+                        MarketPrice.date == arrival_date,
+                    )
+                )
+                existing = existing_result.scalar_one_or_none()
+                if existing:
+                    existing.min_price = min_p
+                    existing.max_price = max_p
+                    existing.modal_price = modal_p
+                    price_row = existing
+                else:
+                    price_row = MarketPrice(
+                        crop_id=crop_id,
+                        market_id=market_id,
+                        date=arrival_date,
+                        min_price=min_p,
+                        max_price=max_p,
+                        modal_price=modal_p,
+                    )
+                    db.add(price_row)
+
+                await db.commit()
+                await db.refresh(price_row)
+                latest_price = price_row
+        except Exception:
+            pass
+
+    # If still no price is available, return 404 with exact requested message
     if latest_price is None or latest_price.modal_price is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No market price data available",
+            detail="No mandi price data available for this crop and market.",
         )
 
     modal_price = float(latest_price.modal_price)
-    msp_price = float(msp["msp_per_quintal"])
+    raw_msp = msp.get("msp_per_quintal") if msp else None
+    msp_price = float(raw_msp) if raw_msp is not None else None
 
-    difference = modal_price - msp_price
-
-    difference_percent = (
-        (difference / msp_price) * 100
-        if msp_price
-        else 0
-    )
-
-    if difference > 0:
-        status_text = "ABOVE_MSP"
-    elif difference < 0:
-        status_text = "BELOW_MSP"
+    if msp_price is not None:
+        difference = modal_price - msp_price
+        difference_percent = ((difference / msp_price) * 100) if msp_price else 0.0
+        if difference > 0:
+            status_text = "ABOVE_MSP"
+        elif difference < 0:
+            status_text = "BELOW_MSP"
+        else:
+            status_text = "AT_MSP"
     else:
-        status_text = "AT_MSP"
+        difference = 0.0
+        difference_percent = 0.0
+        status_text = "NOT_APPLICABLE"
 
     return {
         "crop_id": crop_id,
@@ -315,13 +376,10 @@ async def get_msp_comparison(
         "market_price_date": latest_price.date,
         "modal_price": modal_price,
         "msp": msp_price,
-        "season": msp["season"],
-        "marketing_year": msp["marketing_year"],
-        "difference": round(difference, 2),
-        "difference_percent": round(
-            difference_percent,
-            2,
-        ),
+        "season": msp.get("season") if msp else None,
+        "marketing_year": msp.get("marketing_year", "2026-27") if msp else "2026-27",
+        "difference": round(difference, 2) if difference is not None else None,
+        "difference_percent": round(difference_percent, 2) if difference_percent is not None else None,
         "status": status_text,
     }
 

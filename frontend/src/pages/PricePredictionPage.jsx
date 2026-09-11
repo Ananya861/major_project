@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   HelpCircle,
+  MapPin,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -32,9 +33,12 @@ const PricePredictionPage = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
+  const [states, setStates] = useState([]);
+  const [selectedState, setSelectedState] = useState('');
   const [crops, setCrops] = useState([]);
   const [markets, setMarkets] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const [loadingMarkets, setLoadingMarkets] = useState(false);
 
   const [selectedCropId, setSelectedCropId] = useState('');
   const [selectedMarketId, setSelectedMarketId] = useState('');
@@ -109,13 +113,15 @@ const PricePredictionPage = () => {
     const loadCatalog = async () => {
       setLoadingCatalog(true);
       try {
-        const [cropsData, marketsData] = await Promise.all([
+        const [cropsData, marketsData, statesData] = await Promise.all([
           catalogService.getCrops(),
           catalogService.getMarkets(),
+          catalogService.getStates(),
         ]);
         if (isMounted) {
           setCrops(cropsData);
           setMarkets(marketsData);
+          setStates(statesData || []);
 
           const wheatCrop = cropsData.find((c) => c.name?.toLowerCase() === 'wheat');
           const defaultCrop = wheatCrop || cropsData[0];
@@ -129,6 +135,13 @@ const PricePredictionPage = () => {
 
           setSelectedCropId((prev) => cropParam || prev || initialCropId);
           setSelectedMarketId((prev) => marketParam || prev || initialMarketId);
+
+          if (marketParam) {
+            const foundMarket = marketsData.find((m) => String(m.market_id) === String(marketParam));
+            if (foundMarket?.state) {
+              setSelectedState(foundMarket.state);
+            }
+          }
 
           if (initialCropId && initialMarketId && !initialPredictDone.current) {
             initialPredictDone.current = true;
@@ -146,6 +159,29 @@ const PricePredictionPage = () => {
       isMounted = false;
     };
   }, [cropParam, marketParam, handlePredict]);
+
+  const handleStateChange = async (newState) => {
+    setSelectedState(newState);
+    setLoadingMarkets(true);
+    try {
+      const filteredMarkets = await catalogService.getMarkets(newState);
+      setMarkets(filteredMarkets);
+      if (filteredMarkets.length > 0) {
+        const currentStillExists = filteredMarkets.some(
+          (m) => String(m.market_id) === String(selectedMarketId)
+        );
+        if (!currentStillExists) {
+          setSelectedMarketId(String(filteredMarkets[0].market_id));
+        }
+      } else {
+        setSelectedMarketId('');
+      }
+    } catch (err) {
+      console.error('Failed to filter markets by state:', err);
+    } finally {
+      setLoadingMarkets(false);
+    }
+  };
 
   const chartData =
     forecastData?.forecast?.map((item) => ({
@@ -174,9 +210,15 @@ const PricePredictionPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="inline-flex items-center space-x-2 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 mb-2">
-          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          <span>{t('prediction.title', 'Mandi Price Forecasting')}</span>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="inline-flex items-center space-x-2 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span>{t('prediction.title', 'Mandi Price Forecasting')}</span>
+          </div>
+          <div className="inline-flex items-center space-x-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+            <MapPin className="w-3.5 h-3.5 text-slate-500" />
+            <span>Pan-India Mandi Network ({markets.length} Markets)</span>
+          </div>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           {t('prediction.title', 'Mandi Price Forecasting')}
@@ -192,7 +234,27 @@ const PricePredictionPage = () => {
         <div className="space-y-6">
           {/* Inputs Bar */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+              {/* State Filter */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  {t('market.stateLabel', 'State / Region')}
+                </label>
+                <select
+                  value={selectedState}
+                  onChange={(e) => handleStateChange(e.target.value)}
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
+                >
+                  <option value="">{t('market.allStates', 'All States / Pan-India')}</option>
+                  {states.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Commodity */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   {t('market.commodityLabel', 'Commodity')}
@@ -206,7 +268,7 @@ const PricePredictionPage = () => {
                       setSelectedMarketId(String(CROP_BENCHMARK_MARKET_MAP[newCropId]));
                     }
                   }}
-                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
                 >
                   {crops.map((c) => (
                     <option key={c.crop_id} value={String(c.crop_id)}>
@@ -216,31 +278,34 @@ const PricePredictionPage = () => {
                 </select>
               </div>
 
+              {/* Mandi Market */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  {t('market.marketLabel', 'Mandi Market')}
+                  {t('market.marketLabel', 'Mandi Market')} {loadingMarkets ? '...' : `(${markets.length})`}
                 </label>
                 <select
                   value={selectedMarketId}
                   onChange={(e) => setSelectedMarketId(e.target.value)}
-                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                  disabled={loadingMarkets || markets.length === 0}
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50 disabled:opacity-50"
                 >
                   {markets.map((m) => (
                     <option key={m.market_id} value={String(m.market_id)}>
-                      {m.name} ({m.district})
+                      {m.name} {m.district ? `(${m.district}, ${m.state})` : (m.state ? `(${m.state})` : '')}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Forecast Horizon */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  {t('prediction.daysAheadLabel', 'Forecast Horizon (Days)')}
+                  {t('prediction.daysAheadLabel', 'Horizon (Days)')}
                 </label>
                 <select
                   value={daysAhead}
                   onChange={(e) => setDaysAhead(Number(e.target.value))}
-                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
                 >
                   <option value={3}>3 Days Ahead</option>
                   <option value={5}>5 Days Ahead</option>
@@ -251,10 +316,11 @@ const PricePredictionPage = () => {
                 </select>
               </div>
 
+              {/* Action Button */}
               <div>
                 <button
                   onClick={() => handlePredict(selectedCropId, selectedMarketId, daysAhead)}
-                  disabled={loadingForecast}
+                  disabled={loadingForecast || !selectedMarketId}
                   className="w-full py-3 px-5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl shadow-sm shadow-blue-600/20 transition flex items-center justify-center space-x-2 disabled:opacity-50"
                 >
                   {loadingForecast ? (
@@ -262,7 +328,7 @@ const PricePredictionPage = () => {
                   ) : (
                     <TrendingUp className="w-4 h-4" />
                   )}
-                  <span>{loadingForecast ? t('prediction.evaluating', 'Forecasting Prices...') : t('prediction.predictBtn', 'Generate Price Forecast')}</span>
+                  <span>{loadingForecast ? t('prediction.evaluating', 'Forecasting...') : t('prediction.predictBtn', 'Generate Forecast')}</span>
                 </button>
               </div>
             </div>

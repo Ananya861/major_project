@@ -48,10 +48,52 @@
     "msp_per_quintal": 5875
   },
   {
+    "commodity": "Chickpea",
+    "season": "Rabi",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 5875
+  },
+  {
     "commodity": "Green Gram(Moong)(Whole)",
     "season": "Kharif",
     "marketing_year": "2026-27",
     "msp_per_quintal": 8780
+  },
+  {
+    "commodity": "Mungbean",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 8780
+  },
+  {
+    "commodity": "Blackgram",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 7400
+  },
+  {
+    "commodity": "Cotton",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 7121
+  },
+  {
+    "commodity": "Pigeonpeas",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 7550
+  },
+  {
+    "commodity": "Lentil",
+    "season": "Rabi",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 6700
+  },
+  {
+    "commodity": "Jute",
+    "season": "Kharif",
+    "marketing_year": "2026-27",
+    "msp_per_quintal": 5335
   },
   {
     "commodity": "Potato",
