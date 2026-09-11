@@ -16,6 +16,7 @@ import {
   Database,
   Radio,
   Search,
+  MapPin,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -23,9 +24,12 @@ const MarketPricesPage = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
+  const [states, setStates] = useState([]);
+  const [selectedState, setSelectedState] = useState('');
   const [crops, setCrops] = useState([]);
   const [markets, setMarkets] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const [loadingMarkets, setLoadingMarkets] = useState(false);
 
   const [selectedCropId, setSelectedCropId] = useState('');
   const [selectedMarketId, setSelectedMarketId] = useState('');
@@ -67,7 +71,6 @@ const MarketPricesPage = () => {
 
     try {
       const data = await marketService.getMarketPrices(cropIdToUse, marketIdToUse);
-      // GET /market/prices returns an ARRAY of MarketPrice objects. Ensure response.data / array is handled cleanly
       const records = Array.isArray(data) ? data : (data ? [data] : []);
       if (records.length === 0) {
         setError('No market price data available');
@@ -86,19 +89,21 @@ const MarketPricesPage = () => {
   const cropParam = searchParams.get('crop_id') || '';
   const marketParam = searchParams.get('market_id') || '';
 
-  // Load crops and markets catalogs
+  // Load initial catalog (states, crops, markets)
   useEffect(() => {
     let isMounted = true;
     const loadCatalog = async () => {
       setLoadingCatalog(true);
       try {
-        const [cropsData, marketsData] = await Promise.all([
+        const [cropsData, marketsData, statesData] = await Promise.all([
           catalogService.getCrops(),
           catalogService.getMarkets(),
+          catalogService.getStates(),
         ]);
         if (isMounted) {
           setCrops(cropsData);
           setMarkets(marketsData);
+          setStates(statesData || []);
 
           const wheatCrop = cropsData.find((c) => c.name?.toLowerCase() === 'wheat');
           const defaultCrop = wheatCrop || cropsData[0];
@@ -108,6 +113,13 @@ const MarketPricesPage = () => {
 
           setSelectedCropId((prev) => cropParam || prev || initialCropId);
           setSelectedMarketId((prev) => marketParam || prev || initialMarketId);
+
+          if (marketParam) {
+            const foundMarket = marketsData.find((m) => String(m.market_id) === String(marketParam));
+            if (foundMarket?.state) {
+              setSelectedState(foundMarket.state);
+            }
+          }
 
           if (initialCropId && initialMarketId && !initialFetchDone.current) {
             initialFetchDone.current = true;
@@ -126,6 +138,30 @@ const MarketPricesPage = () => {
     };
   }, [cropParam, marketParam, handleFetchPrices]);
 
+  // Handle state filter changes
+  const handleStateChange = async (newState) => {
+    setSelectedState(newState);
+    setLoadingMarkets(true);
+    try {
+      const filteredMarkets = await catalogService.getMarkets(newState);
+      setMarkets(filteredMarkets);
+      if (filteredMarkets.length > 0) {
+        const currentStillExists = filteredMarkets.some(
+          (m) => String(m.market_id) === String(selectedMarketId)
+        );
+        if (!currentStillExists) {
+          setSelectedMarketId(String(filteredMarkets[0].market_id));
+        }
+      } else {
+        setSelectedMarketId('');
+      }
+    } catch (err) {
+      console.error('Failed to filter markets by state:', err);
+    } finally {
+      setLoadingMarkets(false);
+    }
+  };
+
   const selectedCrop = crops.find((c) => String(c.crop_id) === String(selectedCropId));
   const selectedMarket = markets.find((m) => String(m.market_id) === String(selectedMarketId));
 
@@ -133,9 +169,15 @@ const MarketPricesPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="inline-flex items-center space-x-2 text-xs font-semibold text-agri-700 bg-agri-50 px-3 py-1 rounded-full border border-agri-200 mb-2">
-          <Store className="w-3.5 h-3.5 text-agri-600" />
-          <span>{t('market.liveBadge', 'Official Agmarknet Live')}</span>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="inline-flex items-center space-x-2 text-xs font-semibold text-agri-700 bg-agri-50 px-3 py-1 rounded-full border border-agri-200">
+            <Store className="w-3.5 h-3.5 text-agri-600" />
+            <span>{t('market.liveBadge', 'Official Agmarknet Live')}</span>
+          </div>
+          <div className="inline-flex items-center space-x-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+            <MapPin className="w-3.5 h-3.5 text-slate-500" />
+            <span>Pan-India Mandi Network ({markets.length} Available)</span>
+          </div>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           {t('market.title', 'Live Mandi Prices & Arrivals')}
@@ -151,7 +193,27 @@ const MarketPricesPage = () => {
         <div className="space-y-6">
           {/* Filters Bar */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              {/* State Filter */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  {t('market.stateLabel', 'State / Region')}
+                </label>
+                <select
+                  value={selectedState}
+                  onChange={(e) => handleStateChange(e.target.value)}
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                >
+                  <option value="">{t('market.allStates', 'All States / Pan-India')}</option>
+                  {states.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Commodity */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   {t('market.commodityLabel', 'Commodity')}
@@ -169,27 +231,30 @@ const MarketPricesPage = () => {
                 </select>
               </div>
 
+              {/* Mandi Market */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  {t('market.marketLabel', 'Mandi Market')}
+                  {t('market.marketLabel', 'Mandi Market')} {loadingMarkets ? '...' : `(${markets.length})`}
                 </label>
                 <select
                   value={selectedMarketId}
                   onChange={(e) => setSelectedMarketId(e.target.value)}
-                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
+                  disabled={loadingMarkets || markets.length === 0}
+                  className="w-full px-4 py-3 text-sm font-semibold text-slate-800 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50 disabled:opacity-50"
                 >
                   {markets.map((m) => (
                     <option key={m.market_id} value={String(m.market_id)}>
-                      {m.name} {m.district ? `(${m.district}, ${m.state})` : ''}
+                      {m.name} {m.district ? `(${m.district}, ${m.state})` : (m.state ? `(${m.state})` : '')}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Action Button */}
               <div>
                 <button
                   onClick={() => handleFetchPrices(selectedCropId, selectedMarketId)}
-                  disabled={loadingPrices}
+                  disabled={loadingPrices || !selectedMarketId}
                   className="w-full py-3 px-5 bg-agri-600 hover:bg-agri-700 text-white text-sm font-bold rounded-2xl shadow-sm shadow-agri-600/20 transition flex items-center justify-center space-x-2 disabled:opacity-50"
                 >
                   {loadingPrices ? (
