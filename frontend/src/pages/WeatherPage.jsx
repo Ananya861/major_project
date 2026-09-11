@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFarm } from '../context/FarmContext';
+import { useTranslation } from '../i18n/LanguageContext';
 import { weatherService } from '../services/weatherService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -21,6 +22,7 @@ import {
 import { formatDateTime } from '../utils/formatters';
 
 const WeatherPage = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const { farms } = useFarm();
 
@@ -121,14 +123,13 @@ const WeatherPage = () => {
       <div>
         <div className="inline-flex items-center space-x-2 text-xs font-semibold text-sky-700 bg-sky-50 px-3 py-1 rounded-full border border-sky-200 mb-2">
           <CloudSun className="w-3.5 h-3.5 text-sky-600" />
-          <span>OpenWeather &amp; Agro-Climatic Intelligence</span>
+          <span>{t('weather.title', 'Weather Insights & Agrometeorology')}</span>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Weather Intelligence &amp; Forecast
+          {t('weather.title', 'Weather Insights & Agrometeorology')}
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-          Live agro-climatic readings matched to your farm coordinates. Supplies temperature and
-          precipitation data to the Crop Recommendation AI engine.
+          {t('weather.subtitle', 'Real-time weather parameters and 7-day agricultural forecasts tailored to your farm location.')}
         </p>
       </div>
 
@@ -138,7 +139,7 @@ const WeatherPage = () => {
           {farms.length > 0 && (
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Quick Select from Registered Farms
+                {t('farms.farmListTitle', 'Quick Select from Registered Farms')}
               </label>
               <div className="flex flex-wrap gap-2">
                 {farms.map((f) => (
@@ -151,7 +152,7 @@ const WeatherPage = () => {
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    Farm #{f.farm_id} ({f.area_acres} Ac)
+                    {t('nav.myFarms', 'Farm')} #{f.farm_id} ({f.area_acres} {t('common.acres', 'Ac')})
                   </button>
                 ))}
               </div>
@@ -160,7 +161,7 @@ const WeatherPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end pt-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Latitude</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">{t('addFarm.latLabel', 'Latitude')}</label>
               <input
                 type="number"
                 step="any"
@@ -174,7 +175,7 @@ const WeatherPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Longitude</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">{t('addFarm.lonLabel', 'Longitude')}</label>
               <input
                 type="number"
                 step="any"
@@ -199,7 +200,7 @@ const WeatherPage = () => {
                 ) : (
                   <Compass className="w-3.5 h-3.5 text-slate-500" />
                 )}
-                <span>{locating ? 'GPS Detecting...' : 'Use My GPS'}</span>
+                <span>{locating ? t('common.loading', 'GPS Detecting...') : 'Use My GPS'}</span>
               </button>
             </div>
 
@@ -214,7 +215,7 @@ const WeatherPage = () => {
                 ) : (
                   <Search className="w-3.5 h-3.5" />
                 )}
-                <span>{loading ? 'Fetching...' : 'Query Weather'}</span>
+                <span>{loading ? t('common.loading', 'Fetching...') : t('common.search', 'Query Weather')}</span>
               </button>
             </div>
           </div>
@@ -227,7 +228,7 @@ const WeatherPage = () => {
         <div className="py-12 bg-white rounded-3xl border border-slate-200/80">
           <LoadingSpinner
             size="lg"
-            message="Querying real-time satellite weather for coordinates..."
+            message={t('common.loading', 'Querying real-time satellite weather for coordinates...')}
           />
         </div>
       )}
@@ -239,17 +240,17 @@ const WeatherPage = () => {
             <div>
               <div className="flex items-center space-x-3">
                 <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Agro-Weather Report
+                  {t('weather.currentWeather', 'Current Weather Status')}
                 </h2>
                 {weatherData.cached ? (
                   <Badge variant="neutral" className="flex items-center space-x-1">
                     <Database className="w-3 h-3" />
-                    <span>Cached Reading</span>
+                    <span>{t('market.cachedBadge', 'Archived Database Record')}</span>
                   </Badge>
                 ) : (
                   <Badge variant="success" className="flex items-center space-x-1">
                     <Radio className="w-3 h-3 animate-pulse text-emerald-600" />
-                    <span>Live Weather Sync</span>
+                    <span>{t('market.liveBadge', 'Official Agmarknet Live')}</span>
                   </Badge>
                 )}
               </div>
@@ -261,7 +262,7 @@ const WeatherPage = () => {
                 </span>
                 <span>•</span>
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>Recorded: {formatDateTime(weatherData.date)}</span>
+                <span>{t('farms.recordedAt', 'Recorded on')}: {formatDateTime(weatherData.date)}</span>
               </p>
             </div>
           </div>
@@ -271,7 +272,7 @@ const WeatherPage = () => {
             <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200/80 rounded-2xl">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
-                  Temperature
+                  {t('weather.temp', 'Temperature')}
                 </span>
                 <Thermometer className="w-5 h-5 text-amber-600" />
               </div>
@@ -280,13 +281,13 @@ const WeatherPage = () => {
                   ? `${weatherData.temp}°C`
                   : 'N/A'}
               </div>
-              <span className="text-xs text-amber-700 mt-1 block">Ambient temperature</span>
+              <span className="text-xs text-amber-700 mt-1 block">{t('weather.feelsLike', 'Feels Like')}</span>
             </div>
 
             <div className="p-6 bg-gradient-to-br from-blue-50 to-sky-50/50 border border-blue-200/80 rounded-2xl">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">
-                  Rainfall / Precipitation
+                  {t('weather.rainfall', 'Precipitation')}
                 </span>
                 <CloudRain className="w-5 h-5 text-blue-600" />
               </div>
@@ -295,13 +296,13 @@ const WeatherPage = () => {
                   ? `${weatherData.rainfall} mm`
                   : '0.0 mm'}
               </div>
-              <span className="text-xs text-blue-700 mt-1 block">Local precipitation</span>
+              <span className="text-xs text-blue-700 mt-1 block">{t('weather.rainfall', 'Precipitation')}</span>
             </div>
 
             <div className="p-6 bg-gradient-to-br from-teal-50 to-emerald-50/50 border border-teal-200/80 rounded-2xl">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-teal-800 uppercase tracking-wider">
-                  Relative Humidity
+                  {t('weather.humidity', 'Relative Humidity')}
                 </span>
                 <Droplets className="w-5 h-5 text-teal-600" />
               </div>
@@ -310,7 +311,7 @@ const WeatherPage = () => {
                   ? `${weatherData.humidity}%`
                   : 'N/A'}
               </div>
-              <span className="text-xs text-teal-700 mt-1 block">Atmospheric moisture</span>
+              <span className="text-xs text-teal-700 mt-1 block">{t('weather.humidity', 'Relative Humidity')}</span>
             </div>
           </div>
 
@@ -318,7 +319,7 @@ const WeatherPage = () => {
           {weatherData.forecast && (
             <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/70">
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Forecast Observations
+                {t('weather.advisoryTitle', 'Farming Advisory based on Weather')}
               </h4>
               <p className="text-xs text-slate-600">
                 {typeof weatherData.forecast === 'string'

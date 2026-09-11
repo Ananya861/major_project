@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import Modal from '../common/Modal';
 import { farmService } from '../../services/farmService';
 import { useFarm } from '../../context/FarmContext';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { MapPin, Loader2, AlertCircle } from 'lucide-react';
 
 const AddFarmModal = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const { refreshFarms } = useFarm();
   const [formData, setFormData] = useState({
     latitude: '',
@@ -111,7 +113,7 @@ const AddFarmModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Register New Farm">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('addFarm.modalTitle', 'Register New Farm Parcel')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl flex items-center space-x-2">
@@ -122,7 +124,7 @@ const AddFarmModal = ({ isOpen, onClose }) => {
 
         <div className="flex justify-between items-center pb-1">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Location Coordinates
+            {t('farms.locationLabel', 'Location Coordinates')}
           </span>
           <button
             type="button"
@@ -135,19 +137,19 @@ const AddFarmModal = ({ isOpen, onClose }) => {
             ) : (
               <MapPin className="w-3.5 h-3.5" />
             )}
-            <span>{locating ? 'Getting current location...' : 'Use Current GPS'}</span>
+            <span>{locating ? t('common.loading', 'Getting current location...') : 'Use Current GPS'}</span>
           </button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Latitude <span className="text-red-500">*</span>
+              {t('addFarm.latLabel', 'Latitude')} <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               step="any"
-              placeholder="e.g. 23.83"
+              placeholder={t('addFarm.latPlaceholder', 'e.g. 23.4567')}
               value={formData.latitude}
               onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
               required
@@ -156,12 +158,12 @@ const AddFarmModal = ({ isOpen, onClose }) => {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Longitude <span className="text-red-500">*</span>
+              {t('addFarm.lonLabel', 'Longitude')} <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               step="any"
-              placeholder="e.g. 76.91"
+              placeholder={t('addFarm.lonPlaceholder', 'e.g. 76.5432')}
               value={formData.longitude}
               onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
               required
@@ -172,13 +174,13 @@ const AddFarmModal = ({ isOpen, onClose }) => {
 
         <div>
           <label className="block text-xs font-medium text-slate-700 mb-1">
-            Total Farm Area (Acres) <span className="text-red-500">*</span>
+            {t('addFarm.areaLabel', 'Parcel Area (Acres)')} <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
             step="0.1"
             min="0.1"
-            placeholder="e.g. 4.5"
+            placeholder={t('addFarm.areaPlaceholder', 'e.g. 4.5')}
             value={formData.area_acres}
             onChange={(e) => setFormData({ ...formData, area_acres: e.target.value })}
             required
@@ -192,7 +194,7 @@ const AddFarmModal = ({ isOpen, onClose }) => {
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </button>
           <button
             type="submit"
@@ -200,7 +202,7 @@ const AddFarmModal = ({ isOpen, onClose }) => {
             className="inline-flex items-center space-x-2 px-5 py-2 text-sm font-semibold bg-agri-600 hover:bg-agri-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            <span>{submitting ? 'Saving Farm...' : 'Add Farm'}</span>
+            <span>{submitting ? t('addFarm.submitting', 'Registering Farm...') : t('common.save', 'Add Farm')}</span>
           </button>
         </div>
       </form>

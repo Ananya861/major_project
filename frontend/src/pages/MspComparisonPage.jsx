@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from '../i18n/LanguageContext';
 import { catalogService } from '../services/catalogService';
 import { marketService } from '../services/marketService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -17,6 +18,7 @@ import {
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const MspComparisonPage = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
   const [crops, setCrops] = useState([]);
@@ -130,20 +132,20 @@ const MspComparisonPage = () => {
     if (status === 'ABOVE_MSP') {
       return (
         <Badge variant="success" className="text-xs px-3 py-1">
-          Trading Above MSP
+          {t('msp.statusAboveMsp', 'Trading Above MSP')}
         </Badge>
       );
     }
     if (status === 'BELOW_MSP') {
       return (
         <Badge variant="danger" className="text-xs px-3 py-1">
-          Trading Below MSP
+          {t('msp.statusBelowMsp', 'Trading Below MSP')}
         </Badge>
       );
     }
     return (
       <Badge variant="neutral" className="text-xs px-3 py-1">
-        At Par with MSP
+        {t('msp.statusAtMsp', 'At Par with MSP')}
       </Badge>
     );
   };
@@ -154,19 +156,18 @@ const MspComparisonPage = () => {
       <div>
         <div className="inline-flex items-center space-x-2 text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200 mb-2">
           <Scale className="w-3.5 h-3.5 text-purple-600" />
-          <span>Government Price Floor Benchmark</span>
+          <span>{t('msp.benchmarkBadge', 'Government Price Floor Benchmark')}</span>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          MSP Comparison &amp; Fair Price Analysis
+          {t('msp.title', 'MSP Comparison & Fair Price Analysis')}
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-          Compares current daily mandi modal prices with official Government of India Minimum Support
-          Prices (MSP) to alert farmers about distress sales or favorable market conditions.
+          {t('msp.subtitle', 'Compares current daily mandi modal prices with official Government of India Minimum Support Prices (MSP).')}
         </p>
       </div>
 
       {loadingCatalog ? (
-        <LoadingSpinner message="Loading commodity catalog &amp; markets..." />
+        <LoadingSpinner message={t('common.loading', 'Loading commodity catalog & markets...')} />
       ) : (
         <div className="space-y-6">
           {/* Controls Bar */}
@@ -174,7 +175,7 @@ const MspComparisonPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Commodity
+                  {t('market.commodityLabel', 'Commodity')}
                 </label>
                 <select
                   value={selectedCropId}
@@ -191,7 +192,7 @@ const MspComparisonPage = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Mandi Market
+                  {t('market.marketLabel', 'Mandi Market')}
                 </label>
                 <select
                   value={selectedMarketId}
@@ -217,7 +218,7 @@ const MspComparisonPage = () => {
                   ) : (
                     <Search className="w-4 h-4" />
                   )}
-                  <span>{loadingMsp ? 'Evaluating...' : 'Run MSP Comparison'}</span>
+                  <span>{loadingMsp ? t('msp.evaluating', 'Evaluating Market...') : t('msp.compareBtn', 'Run MSP Comparison')}</span>
                 </button>
               </div>
             </div>
@@ -241,7 +242,7 @@ const MspComparisonPage = () => {
                 <div>
                   <div className="flex items-center space-x-3">
                     <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                      {mspData.crop} MSP Benchmark
+                      {mspData.crop} {t('msp.benchmarkBadge', 'MSP Benchmark')}
                     </h2>
                     {getStatusBadge(mspData.status)}
                   </div>
@@ -251,13 +252,13 @@ const MspComparisonPage = () => {
                     </span>
                     <span>•</span>
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Price Date: {formatDate(mspData.market_price_date)}</span>
+                    <span>{t('market.arrivalDate', 'Price Date')}: {formatDate(mspData.market_price_date)}</span>
                   </p>
                 </div>
 
                 <div className="text-xs text-slate-500 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-100">
-                  <span className="font-semibold text-slate-700">{mspData.season} Season</span> •{' '}
-                  <span>Marketing Year {mspData.marketing_year}</span>
+                  <span className="font-semibold text-slate-700">{mspData.season}</span> •{' '}
+                  <span>{mspData.marketing_year}</span>
                 </div>
               </div>
 
@@ -266,26 +267,26 @@ const MspComparisonPage = () => {
                 {/* Mandi Modal Price */}
                 <div className="p-6 bg-slate-50 border border-slate-200/80 rounded-2xl">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                    Actual Market Modal Price
+                    {t('msp.mandiModalPrice', 'Actual Market Modal Price')}
                   </span>
                   <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
                     {formatCurrency(mspData.modal_price)}
                   </div>
-                  <span className="text-xs text-slate-500 mt-1 block">per Quintal (100 kg)</span>
+                  <span className="text-xs text-slate-500 mt-1 block">{t('market.perQuintal', 'per Quintal (100 kg)')}</span>
                 </div>
 
                 {/* MSP Price */}
                 <div className="p-6 bg-purple-50/60 border border-purple-200/80 rounded-2xl">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-purple-700 uppercase tracking-wider block">
-                      Government MSP Floor
+                      {t('msp.govtMspFloor', 'Government MSP Floor')}
                     </span>
-                    <Badge variant="neutral">Govt. Notified</Badge>
+                    <Badge variant="neutral">{t('msp.benchmarkBadge', 'Benchmark')}</Badge>
                   </div>
                   <div className="text-3xl font-extrabold text-purple-900 tracking-tight">
                     {formatCurrency(mspData.msp)}
                   </div>
-                  <span className="text-xs text-purple-600 mt-1 block">per Quintal</span>
+                  <span className="text-xs text-purple-600 mt-1 block">{t('market.perQuintal', 'per Quintal')}</span>
                 </div>
 
                 {/* Price Difference */}
@@ -297,7 +298,7 @@ const MspComparisonPage = () => {
                   }`}
                 >
                   <span className="text-xs font-bold uppercase tracking-wider mb-2 block opacity-80">
-                    Difference vs MSP
+                    {t('msp.differenceVsMsp', 'Difference vs MSP')}
                   </span>
                   <div className="text-3xl font-extrabold tracking-tight flex items-center space-x-1">
                     {mspData.difference >= 0 ? (
@@ -312,7 +313,7 @@ const MspComparisonPage = () => {
                   </div>
                   <span className="text-xs font-semibold mt-1 block">
                     {mspData.difference >= 0 ? '+' : ''}
-                    {mspData.difference_percent}% compared to MSP
+                    {mspData.difference_percent}%
                   </span>
                 </div>
               </div>
@@ -325,20 +326,15 @@ const MspComparisonPage = () => {
                   ) : (
                     <AlertTriangle className="w-4 h-4 text-amber-500" />
                   )}
-                  <span>Farmer Advisory Insight</span>
+                  <span>{t('cropReco.plantingAdvisoryTitle', 'Farmer Advisory Insight')}</span>
                 </div>
                 {mspData.status === 'ABOVE_MSP' ? (
                   <p>
-                    Market rates at {mspData.market} are currently favorable, trading{' '}
-                    <strong>{formatCurrency(mspData.difference)} above</strong> the Government Minimum
-                    Support Price. Commercial mandi sales represent good returns for this commodity.
+                    {t('msp.favorableNotice', 'Market conditions are favorable. Current modal price is above the government floor rate.')}
                   </p>
                 ) : (
                   <p>
-                    Market rates are currently trading below the notified MSP of{' '}
-                    <strong>{formatCurrency(mspData.msp)}</strong>. If selling, consider government
-                    procurement centers (FCI / NAFED / state cooperatives) where applicable to avoid
-                    distress pricing.
+                    {t('msp.distressNotice', 'Warning: Market rate is currently below MSP. Farmers are advised to sell via government procurement centers.')}
                   </p>
                 )}
               </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,53 +15,58 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-const navigationGroups = [
-  {
-    title: 'MAIN',
-    items: [
-      { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-    ],
-  },
-  {
-    title: 'AI & ADVISORY',
-    items: [
-      { name: 'Crop Recommendation', to: '/crop-recommendation', icon: Sprout },
-      { name: 'Price Prediction', to: '/price-prediction', icon: TrendingUp },
-    ],
-  },
-  {
-    title: 'MARKET INTELLIGENCE',
-    items: [
-      { name: 'Market Prices', to: '/market-prices', icon: Store },
-      { name: 'MSP Comparison', to: '/msp-comparison', icon: Scale },
-    ],
-  },
-  {
-    title: 'FARM INTELLIGENCE',
-    items: [
-      { name: 'My Farms & Soil', to: '/farms', icon: Tractor },
-      { name: 'Weather Insights', to: '/weather', icon: CloudSun },
-    ],
-  },
-  {
-    title: 'TOOLS & SERVICES',
-    items: [
-      { name: 'Profit Calculator', to: '/profit-calculator', icon: Calculator },
-    ],
-  },
-  {
-    title: 'ACCOUNT',
-    items: [
-      { name: 'Farmer Profile', to: '/profile', icon: User },
-      { name: 'Notifications', to: '/notifications', icon: Bell },
-      { name: 'Help & Docs', to: '/help', icon: HelpCircle },
-    ],
-  },
-];
+import { useTranslation } from '../../i18n/LanguageContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
+
+  const navigationGroups = useMemo(
+    () => [
+      {
+        title: t('nav.mainSection', 'MAIN'),
+        items: [
+          { name: t('nav.dashboard', 'Dashboard'), to: '/dashboard', icon: LayoutDashboard },
+        ],
+      },
+      {
+        title: t('nav.aiSection', 'AI & ADVISORY'),
+        items: [
+          { name: t('nav.cropRecommendation', 'Crop Recommendation'), to: '/crop-recommendation', icon: Sprout },
+          { name: t('nav.pricePrediction', 'Price Prediction'), to: '/price-prediction', icon: TrendingUp },
+        ],
+      },
+      {
+        title: t('nav.marketSection', 'MARKET INTELLIGENCE'),
+        items: [
+          { name: t('nav.marketPrices', 'Market Prices'), to: '/market-prices', icon: Store },
+          { name: t('nav.mspComparison', 'MSP Comparison'), to: '/msp-comparison', icon: Scale },
+        ],
+      },
+      {
+        title: t('nav.farmSection', 'FARM INTELLIGENCE'),
+        items: [
+          { name: t('nav.myFarms', 'My Farms & Soil'), to: '/farms', icon: Tractor },
+          { name: t('nav.weather', 'Weather Insights'), to: '/weather', icon: CloudSun },
+        ],
+      },
+      {
+        title: t('nav.toolsSection', 'TOOLS & SERVICES'),
+        items: [
+          { name: t('nav.profitCalculator', 'Profit Calculator'), to: '/profit-calculator', icon: Calculator },
+        ],
+      },
+      {
+        title: t('nav.accountSection', 'ACCOUNT'),
+        items: [
+          { name: t('nav.profile', 'Farmer Profile'), to: '/profile', icon: User },
+          { name: t('nav.notifications', 'Notifications'), to: '/notifications', icon: Bell },
+          { name: t('nav.help', 'Help & Docs'), to: '/help', icon: HelpCircle },
+        ],
+      },
+    ],
+    [t]
+  );
 
   return (
     <>

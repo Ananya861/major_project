@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from '../i18n/LanguageContext';
 import { catalogService } from '../services/catalogService';
 import { marketService, CROP_BENCHMARK_MARKET_MAP } from '../services/marketService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -28,6 +29,7 @@ import {
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const PricePredictionPage = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
   const [crops, setCrops] = useState([]);
@@ -174,19 +176,18 @@ const PricePredictionPage = () => {
       <div>
         <div className="inline-flex items-center space-x-2 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 mb-2">
           <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          <span>AI Price Forecasting</span>
+          <span>{t('prediction.title', 'Mandi Price Forecasting')}</span>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Crop Price Prediction &amp; Trends
+          {t('prediction.title', 'Mandi Price Forecasting')}
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-          Uses an advanced HistGradientBoostingRegressor machine learning model trained on 311,000+ pan-India mandi
-          records to forecast daily modal prices based on lag and rolling time-series features.
+          {t('prediction.subtitle', 'Time-series machine learning forecast of commodity modal prices for the upcoming 7 to 30 days.')}
         </p>
       </div>
 
       {loadingCatalog ? (
-        <LoadingSpinner message="Loading commodities and markets..." />
+        <LoadingSpinner message={t('common.loading', 'Loading commodities and markets...')} />
       ) : (
         <div className="space-y-6">
           {/* Inputs Bar */}
@@ -194,7 +195,7 @@ const PricePredictionPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Commodity
+                  {t('market.commodityLabel', 'Commodity')}
                 </label>
                 <select
                   value={selectedCropId}
@@ -217,7 +218,7 @@ const PricePredictionPage = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Mandi Market
+                  {t('market.marketLabel', 'Mandi Market')}
                 </label>
                 <select
                   value={selectedMarketId}
@@ -234,7 +235,7 @@ const PricePredictionPage = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Forecast Period
+                  {t('prediction.daysAheadLabel', 'Forecast Horizon (Days)')}
                 </label>
                 <select
                   value={daysAhead}
@@ -245,8 +246,8 @@ const PricePredictionPage = () => {
                   <option value={5}>5 Days Ahead</option>
                   <option value={7}>7 Days Ahead</option>
                   <option value={10}>10 Days Ahead</option>
-                  <option value={14}>14 Days Ahead (2 Weeks)</option>
-                  <option value={30}>30 Days Ahead (1 Month)</option>
+                  <option value={14}>14 Days Ahead</option>
+                  <option value={30}>30 Days Ahead</option>
                 </select>
               </div>
 
@@ -261,7 +262,7 @@ const PricePredictionPage = () => {
                   ) : (
                     <TrendingUp className="w-4 h-4" />
                   )}
-                  <span>{loadingForecast ? 'Computing ML...' : 'Generate Forecast'}</span>
+                  <span>{loadingForecast ? t('prediction.evaluating', 'Forecasting Prices...') : t('prediction.predictBtn', 'Generate Price Forecast')}</span>
                 </button>
               </div>
             </div>
@@ -273,7 +274,7 @@ const PricePredictionPage = () => {
             <div className="py-12 bg-white rounded-3xl border border-slate-200/80">
               <LoadingSpinner
                 size="lg"
-                message="Running HistGradientBoosting price inference over historical mandi arrivals..."
+                message={t('prediction.evaluating', 'Running HistGradientBoosting price inference over historical mandi arrivals...')}
               />
             </div>
           )}
@@ -284,27 +285,27 @@ const PricePredictionPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Day 1 Predicted Price
+                    {t('common.date', 'Day')} 1 {t('market.currentModalPrice', 'Predicted Price')}
                   </span>
                   <div className="text-2xl font-extrabold text-slate-800 mt-1">
                     {formatCurrency(firstPrice)}
                   </div>
-                  <span className="text-xs text-slate-500">per Quintal</span>
+                  <span className="text-xs text-slate-500">{t('market.perQuintal', 'per Quintal')}</span>
                 </div>
 
                 <div className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Day {daysAhead} Predicted Price
+                    {t('common.date', 'Day')} {daysAhead} {t('market.currentModalPrice', 'Predicted Price')}
                   </span>
                   <div className="text-2xl font-extrabold text-slate-800 mt-1">
                     {formatCurrency(lastPrice)}
                   </div>
-                  <span className="text-xs text-slate-500">per Quintal</span>
+                  <span className="text-xs text-slate-500">{t('market.perQuintal', 'per Quintal')}</span>
                 </div>
 
                 <div className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Forecast Trend
+                    {t('msp.differenceVsMsp', 'Forecast Trend')}
                   </span>
                   <div
                     className={`text-2xl font-extrabold mt-1 flex items-center space-x-1 ${priceChange >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -318,7 +319,7 @@ const PricePredictionPage = () => {
                     <span>{Math.abs(priceChangePct).toFixed(2)}%</span>
                   </div>
                   <span className="text-xs text-slate-500">
-                    {priceChange >= 0 ? 'Expected price rise' : 'Expected price dip'} over period
+                    {priceChange >= 0 ? t('msp.statusAboveMsp', 'Expected price rise') : t('msp.statusBelowMsp', 'Expected price dip')}
                   </span>
                 </div>
               </div>
@@ -328,13 +329,13 @@ const PricePredictionPage = () => {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-slate-900">
-                      Price Forecast Trajectory
+                      {t('prediction.forecastChartTitle', 'Expected Price Trend (₹/Quintal)')}
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Predicted daily modal price (₹ / quintal)
+                      {t('market.currentModalPrice', 'Predicted daily modal price')} (₹ / quintal)
                     </p>
                   </div>
-                  <Badge variant="primary">ML Model Output</Badge>
+                  <Badge variant="primary">ML Model</Badge>
                 </div>
 
                 <div className="h-72 w-full">
@@ -387,15 +388,15 @@ const PricePredictionPage = () => {
               {/* Data Table */}
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">
-                  Daily Forecast Breakdown Table
+                  {t('prediction.forecastTableTitle', 'Daily Forecasted Rates')}
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider">
-                        <th className="pb-3">Forecast Date</th>
-                        <th className="pb-3">Predicted Modal Price</th>
-                        <th className="pb-3 text-right">Day-over-Day Shift</th>
+                        <th className="pb-3">{t('common.date', 'Forecast Date')}</th>
+                        <th className="pb-3">{t('market.currentModalPrice', 'Predicted Modal Price')}</th>
+                        <th className="pb-3 text-right">{t('msp.differenceVsMsp', 'Shift')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Lock, MapPin, Loader2, AlertCircle } from 'lucide-react';
+import { useTranslation } from '../i18n/LanguageContext';
+import { User, Phone, Lock, Loader2, AlertCircle } from 'lucide-react';
 
 const RegisterPage = () => {
   const { register } = useAuth();
+  const { t, language, setLanguage, languages } = useTranslation();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -21,20 +23,27 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const handleLanguageChange = (langName, langCode) => {
+    setFormData((prev) => ({ ...prev, preferred_language: langName }));
+    if (langCode) {
+      setLanguage(langCode);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
     if (formData.name.trim().length < 1) {
-      setError('Farmer name is required');
+      setError(t('auth.errorRequired', 'Farmer name is required'));
       return;
     }
     if (formData.phone.trim().length < 8) {
-      setError('Phone number must be at least 8 digits');
+      setError(t('auth.errorPhoneDigits', 'Phone number must be at least 8 digits'));
       return;
     }
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError(t('auth.errorPasswordLength', 'Password must be at least 6 characters long'));
       return;
     }
 
@@ -64,9 +73,11 @@ const RegisterPage = () => {
   return (
     <div>
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Farmer Registration</h2>
+        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+          {t('auth.registerTitle', 'Farmer Registration')}
+        </h2>
         <p className="text-xs text-slate-500 mt-1">
-          Create an AgriSmart account for AI advisory &amp; price prediction
+          {t('auth.registerSubtitle', 'Create an AgriSmart account for AI advisory & price prediction')}
         </p>
       </div>
 
@@ -80,7 +91,7 @@ const RegisterPage = () => {
       <form onSubmit={handleSubmit} className="space-y-3.5">
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Full Name <span className="text-red-500">*</span>
+            {t('auth.nameLabel', 'Full Name')} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -88,7 +99,7 @@ const RegisterPage = () => {
             </div>
             <input
               type="text"
-              placeholder="e.g. Ramesh Patel"
+              placeholder={t('auth.namePlaceholder', 'e.g. Ramesh Patel')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -100,7 +111,7 @@ const RegisterPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Phone Number <span className="text-red-500">*</span>
+              {t('auth.phoneLabel', 'Phone Number')} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -108,7 +119,7 @@ const RegisterPage = () => {
               </div>
               <input
                 type="tel"
-                placeholder="e.g. 9876543210"
+                placeholder={t('auth.phonePlaceholder', 'e.g. 9876543210')}
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
@@ -119,7 +130,7 @@ const RegisterPage = () => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Password <span className="text-red-500">*</span>
+              {t('auth.passwordLabel', 'Password')} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -127,7 +138,7 @@ const RegisterPage = () => {
               </div>
               <input
                 type="password"
-                placeholder="Min 6 chars"
+                placeholder={t('auth.passwordPlaceholder', 'Min 6 chars')}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
@@ -139,30 +150,36 @@ const RegisterPage = () => {
 
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {t('auth.stateLabel', 'State')}
+            </label>
             <input
               type="text"
-              placeholder="e.g. Madhya Pradesh"
+              placeholder={t('auth.statePlaceholder', 'e.g. Madhya Pradesh')}
               value={formData.state}
               onChange={(e) => setFormData({ ...formData, state: e.target.value })}
               className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-agri-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">District</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {t('auth.districtLabel', 'District')}
+            </label>
             <input
               type="text"
-              placeholder="e.g. Rajgarh"
+              placeholder={t('auth.districtPlaceholder', 'e.g. Rajgarh')}
               value={formData.district}
               onChange={(e) => setFormData({ ...formData, district: e.target.value })}
               className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-agri-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Village</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {t('auth.villageLabel', 'Village')}
+            </label>
             <input
               type="text"
-              placeholder="e.g. Biaora"
+              placeholder={t('auth.villagePlaceholder', 'e.g. Khilchipur')}
               value={formData.village}
               onChange={(e) => setFormData({ ...formData, village: e.target.value })}
               className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-agri-500"
@@ -172,18 +189,22 @@ const RegisterPage = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Land (Acres)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {t('auth.landSizeLabel', 'Land (Acres)')}
+            </label>
             <input
               type="number"
               step="0.1"
-              placeholder="e.g. 5"
+              placeholder={t('auth.landSizePlaceholder', 'e.g. 5')}
               value={formData.land_size_acres}
               onChange={(e) => setFormData({ ...formData, land_size_acres: e.target.value })}
               className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-agri-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Farmer Category</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {t('auth.categoryLabel', 'Farmer Category')}
+            </label>
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -196,16 +217,23 @@ const RegisterPage = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Language</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {t('auth.languageLabel', 'Preferred Language')}
+            </label>
             <select
               value={formData.preferred_language}
-              onChange={(e) => setFormData({ ...formData, preferred_language: e.target.value })}
+              onChange={(e) => {
+                const selectedName = e.target.value;
+                const matchLang = languages.find((l) => l.name === selectedName);
+                handleLanguageChange(selectedName, matchLang?.code);
+              }}
               className="w-full px-2 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-white"
             >
-              <option value="English">English</option>
-              <option value="Hindi">Hindi</option>
-              <option value="Kannada">Kannada</option>
-              <option value="Marathi">Marathi</option>
+              {languages.map((l) => (
+                <option key={l.code} value={l.name}>
+                  {l.nativeName} ({l.name})
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -216,14 +244,14 @@ const RegisterPage = () => {
           className="w-full mt-2 py-2.5 px-4 bg-agri-600 hover:bg-agri-700 text-white text-sm font-semibold rounded-xl shadow-sm transition disabled:opacity-50 flex items-center justify-center space-x-2"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          <span>{loading ? 'Creating Account...' : 'Complete Registration'}</span>
+          <span>{loading ? t('auth.registering', 'Creating Account...') : t('auth.submitRegister', 'Complete Registration')}</span>
         </button>
       </form>
 
       <div className="mt-5 text-center text-xs text-slate-500">
-        Already registered?{' '}
+        {t('auth.hasAccount', 'Already registered?')}{' '}
         <Link to="/login" className="font-semibold text-agri-600 hover:text-agri-700 transition">
-          Sign In
+          {t('auth.loginNow', 'Sign In')}
         </Link>
       </div>
     </div>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../i18n/LanguageContext';
 import { Phone, Lock, Loader2, AlertCircle } from 'lucide-react';
 
 const LoginPage = () => {
   const { login } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,7 +23,7 @@ const LoginPage = () => {
     setError(null);
 
     if (!phone.trim() || !password.trim()) {
-      setError('Please provide both phone number and password');
+      setError(t('auth.errorRequired', 'Please provide both phone number and password'));
       return;
     }
 
@@ -40,9 +42,11 @@ const LoginPage = () => {
   return (
     <div>
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Farmer Sign In</h2>
+        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+          {t('auth.loginTitle', 'Farmer Sign In')}
+        </h2>
         <p className="text-xs text-slate-500 mt-1">
-          Access your farm records, crop intelligence, and price forecasts
+          {t('auth.loginSubtitle', 'Access your farm records, crop intelligence, and price forecasts')}
         </p>
       </div>
 
@@ -68,7 +72,7 @@ const LoginPage = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Phone Number
+            {t('auth.phoneLabel', 'Phone Number')}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -76,7 +80,7 @@ const LoginPage = () => {
             </div>
             <input
               type="tel"
-              placeholder="e.g. 9876543210"
+              placeholder={t('auth.phonePlaceholder', 'e.g. 9876543210')}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
@@ -87,7 +91,7 @@ const LoginPage = () => {
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Password
+            {t('auth.passwordLabel', 'Password')}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -95,7 +99,7 @@ const LoginPage = () => {
             </div>
             <input
               type="password"
-              placeholder="••••••••"
+              placeholder={t('auth.passwordPlaceholder', '••••••••')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -110,14 +114,14 @@ const LoginPage = () => {
           className="w-full py-2.5 px-4 bg-agri-600 hover:bg-agri-700 text-white text-sm font-semibold rounded-xl shadow-sm transition disabled:opacity-50 flex items-center justify-center space-x-2"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+          <span>{loading ? t('auth.loggingIn', 'Signing in...') : t('auth.submitLogin', 'Sign In to Farm')}</span>
         </button>
       </form>
 
       <div className="mt-6 text-center text-xs text-slate-500">
-        Don't have an account?{' '}
+        {t('auth.noAccount', "Don't have an account?")}{' '}
         <Link to="/register" className="font-semibold text-agri-600 hover:text-agri-700 transition">
-          Register as a Farmer
+          {t('auth.registerNow', 'Register as a Farmer')}
         </Link>
       </div>
     </div>

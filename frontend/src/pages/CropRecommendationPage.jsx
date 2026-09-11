@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useFarm } from '../context/FarmContext';
+import { useTranslation } from '../i18n/LanguageContext';
 import { farmService } from '../services/farmService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -22,6 +23,7 @@ import {
 import { formatDateTime } from '../utils/formatters';
 
 const CropRecommendationPage = () => {
+  const { t } = useTranslation();
   const { farms, loadingFarms } = useFarm();
   const [searchParams] = useSearchParams();
 
@@ -119,14 +121,13 @@ const CropRecommendationPage = () => {
       <div>
         <div className="inline-flex items-center space-x-2 text-xs font-semibold text-agri-700 bg-agri-50 px-3 py-1 rounded-full border border-agri-200 mb-2">
           <Sparkles className="w-3.5 h-3.5 text-agri-600" />
-          <span>AI-Powered Crop Recommendation</span>
+          <span>{t('cropReco.title', 'AI Crop Recommendation Engine')}</span>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          AI Crop Recommendation
+          {t('cropReco.title', 'AI Crop Recommendation Engine')}
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-          Uses soil nutrient chemistry (Nitrogen, Phosphorus, Potassium, pH, Moisture) alongside
-          real-time temperature and precipitation from OpenWeather to predict optimal crop yields.
+          {t('cropReco.subtitle', 'Predicts the top-yielding crops for your farm based on multi-parameter soil and weather conditions.')}
         </p>
       </div>
 
@@ -142,7 +143,7 @@ const CropRecommendationPage = () => {
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>Get Recommendation</span>
+          <span>{t('cropReco.evaluateBtn', 'Get Recommendation')}</span>
         </button>
         <button
           type="button"
@@ -154,7 +155,7 @@ const CropRecommendationPage = () => {
           }`}
         >
           <History className="w-4 h-4" />
-          <span>Historical Recommendations</span>
+          <span>{t('cropReco.historyTitle', 'Historical Recommendations')}</span>
         </button>
       </div>
 
@@ -162,19 +163,19 @@ const CropRecommendationPage = () => {
       {activeTab === 'get' && (
         <>
           {loadingFarms ? (
-            <LoadingSpinner message="Loading registered farms..." />
+            <LoadingSpinner message={t('common.loading', 'Loading registered farms...')} />
           ) : farms.length === 0 ? (
             <div className="bg-white border border-slate-200/80 rounded-3xl p-8 text-center max-w-md mx-auto">
               <Tractor className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-800">No Farm Registered</h3>
+              <h3 className="text-base font-bold text-slate-800">{t('dashboard.noActiveFarm', 'No farm registered yet')}</h3>
               <p className="text-xs text-slate-500 mt-1 mb-4">
-                You must register a farm plot before requesting AI crop advice.
+                {t('farms.emptyFarmsDesc', 'Add your first farm plot with latitude, longitude, and acreage to start generating crop recommendations.')}
               </p>
               <Link
                 to="/farms"
                 className="inline-flex items-center space-x-2 px-5 py-2.5 bg-agri-600 hover:bg-agri-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
               >
-                <span>Go to My Farms</span>
+                <span>{t('farms.registerFarmBtn', 'Register New Farm')}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -185,7 +186,7 @@ const CropRecommendationPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                      Select Farm for AI Recommendation
+                      {t('cropReco.selectFarmLabel', 'Select Target Farm')}
                     </label>
                     <div className="relative">
                       <select
@@ -198,7 +199,7 @@ const CropRecommendationPage = () => {
                       >
                         {farms.map((f) => (
                           <option key={f.farm_id} value={f.farm_id}>
-                            Farm #{f.farm_id} — {f.area_acres} Acres ({f.latitude.toFixed(4)}°N,{' '}
+                            {t('nav.myFarms', 'Farm')} #{f.farm_id} — {f.area_acres} {t('common.acres', 'Acres')} ({f.latitude.toFixed(4)}°N,{' '}
                             {f.longitude.toFixed(4)}°E)
                           </option>
                         ))}
@@ -217,7 +218,7 @@ const CropRecommendationPage = () => {
                       ) : (
                         <Sparkles className="w-4 h-4" />
                       )}
-                      <span>{loading ? 'Evaluating Model...' : 'Run Recommendation'}</span>
+                      <span>{loading ? t('cropReco.evaluating', 'Analyzing Soil & Climate...') : t('cropReco.evaluateBtn', 'Run Crop Recommendation')}</span>
                     </button>
                   </div>
                 </div>
@@ -229,15 +230,15 @@ const CropRecommendationPage = () => {
                       <FlaskConical className="w-4 h-4 text-agri-600" />
                       {hasSoil ? (
                         <span>
-                          Soil data available (pH: {farmDetail.latest_soil.ph ?? '--'}, N:{' '}
+                          {t('farms.soilReadingsTitle', 'Latest Soil Reading')}: pH {farmDetail.latest_soil.ph ?? '--'}, N:{' '}
                           {farmDetail.latest_soil.nitrogen ?? '--'}, P:{' '}
                           {farmDetail.latest_soil.phosphorus ?? '--'}, K:{' '}
-                          {farmDetail.latest_soil.potassium ?? '--'})
+                          {farmDetail.latest_soil.potassium ?? '--'}
                         </span>
                       ) : (
                         <span className="text-amber-700 font-medium flex items-center space-x-1">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                          <span>No soil test reading recorded yet for this farm.</span>
+                          <span>{t('farms.noSoilData', 'No soil test recorded for this farm yet.')}</span>
                         </span>
                       )}
                     </div>
@@ -247,7 +248,7 @@ const CropRecommendationPage = () => {
                       onClick={() => setAddSoilOpen(true)}
                       className="text-xs font-bold text-agri-600 hover:text-agri-700 self-start sm:self-auto"
                     >
-                      {hasSoil ? 'Update Soil Test' : '+ Log Soil Test Reading'}
+                      {hasSoil ? t('farms.addSoilBtn', 'Record Soil Test') : `+ ${t('farms.addSoilBtn', 'Record Soil Test')}`}
                     </button>
                   </div>
                 )}
@@ -260,7 +261,7 @@ const CropRecommendationPage = () => {
                 <div className="py-12 bg-white rounded-3xl border border-slate-200/80">
                   <LoadingSpinner
                     size="lg"
-                    message="Processing soil nutrients &amp; live weather through crop recommendation model..."
+                    message={t('cropReco.evaluating', 'Processing soil nutrients & live weather through crop recommendation model...')}
                   />
                 </div>
               )}
@@ -270,19 +271,19 @@ const CropRecommendationPage = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-base font-extrabold text-slate-900">
-                        Recommended Crops for Farm #{selectedFarmId}
+                        {t('cropReco.topRecommendationsTitle', 'Top Recommended Crops')} — {t('nav.myFarms', 'Farm')} #{selectedFarmId}
                       </h3>
                       <p className="text-xs text-slate-500 flex items-center space-x-1 mt-0.5">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Inference generated on {formatDateTime(generatedAt)}</span>
+                        <span>{formatDateTime(generatedAt)}</span>
                       </p>
                     </div>
-                    <Badge variant="success">Confidence Ranked</Badge>
+                    <Badge variant="success">{t('cropReco.confidenceScore', 'AI Suitability Score')}</Badge>
                   </div>
 
                   {recommendations.length === 0 ? (
                     <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center text-xs text-slate-500">
-                      No crop recommendation returned. Verify soil reading values.
+                      {t('cropReco.emptyHistory', 'No crop recommendation returned. Verify soil reading values.')}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -313,7 +314,7 @@ const CropRecommendationPage = () => {
                                   </span>
                                   {rank === 1 && (
                                     <Badge variant="primary" className="text-[10px]">
-                                      Top Recommendation
+                                      {t('dashboard.statTopCrop', 'Top Recommendation')}
                                     </Badge>
                                   )}
                                 </div>
@@ -322,7 +323,7 @@ const CropRecommendationPage = () => {
                                     {confidencePct}%
                                   </span>
                                   <span className="block text-[10px] text-slate-400 font-semibold uppercase">
-                                    Match Score
+                                    {t('cropReco.confidenceScore', 'Match Score')}
                                   </span>
                                 </div>
                               </div>
@@ -334,7 +335,7 @@ const CropRecommendationPage = () => {
                                 <div>
                                   <h4 className="text-lg font-bold text-slate-900">{item.crop}</h4>
                                   <p className="text-xs text-slate-500">
-                                    Crop ID: {item.crop_id ?? 'General'}
+                                    ID: {item.crop_id ?? 'General'}
                                   </p>
                                 </div>
                               </div>
@@ -357,7 +358,7 @@ const CropRecommendationPage = () => {
                                 to={`/market-prices`}
                                 className="text-slate-500 hover:text-agri-600 transition inline-flex items-center space-x-1"
                               >
-                                <span>Check Prices</span>
+                                <span>{t('dashboard.viewPricesAction', 'Check Prices')}</span>
                                 <ArrowRight className="w-3 h-3" />
                               </Link>
 
@@ -366,7 +367,7 @@ const CropRecommendationPage = () => {
                                 className="text-agri-600 hover:text-agri-700 transition inline-flex items-center space-x-1"
                               >
                                 <TrendingUp className="w-3.5 h-3.5" />
-                                <span>Forecast Yield Price</span>
+                                <span>{t('nav.pricePrediction', 'Forecast Yield Price')}</span>
                               </Link>
                             </div>
                           </div>
@@ -402,9 +403,9 @@ const CropRecommendationPage = () => {
                 <History className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-slate-800">Historical Recommendation Records</h2>
+                <h2 className="text-sm font-bold text-slate-800">{t('cropReco.historyTitle', 'Historical Recommendations')}</h2>
                 <p className="text-xs text-slate-500">
-                  Genuine historical crop advice generated for your registered farms
+                  {t('cropReco.subtitle', 'Genuine historical crop advice generated for your registered farms')}
                 </p>
               </div>
             </div>
@@ -416,10 +417,10 @@ const CropRecommendationPage = () => {
                   onChange={(e) => setHistoryFarmFilter(e.target.value)}
                   className="px-3 py-2 text-xs font-semibold text-slate-700 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-slate-50/50"
                 >
-                  <option value="">All Farms ({farms.length})</option>
+                  <option value="">{t('common.all', 'All')} {t('farms.farmListTitle', 'Farms')} ({farms.length})</option>
                   {farms.map((f) => (
                     <option key={f.farm_id} value={f.farm_id}>
-                      Farm #{f.farm_id} ({f.area_acres} Acres)
+                      {t('nav.myFarms', 'Farm')} #{f.farm_id} ({f.area_acres} {t('common.acres', 'Acres')})
                     </option>
                   ))}
                 </select>
@@ -429,10 +430,10 @@ const CropRecommendationPage = () => {
                 onClick={() => fetchHistory(historyFarmFilter)}
                 disabled={loadingHistory}
                 className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 disabled:opacity-50"
-                title="Refresh history"
+                title={t('common.refresh', 'Refresh')}
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
+                <span className="hidden sm:inline">{t('common.refresh', 'Refresh')}</span>
               </button>
             </div>
           </div>
@@ -440,7 +441,7 @@ const CropRecommendationPage = () => {
           {/* Loading State */}
           {loadingHistory && (
             <div className="py-12 bg-white rounded-3xl border border-slate-200/80 text-center">
-              <LoadingSpinner size="md" message="Loading historical recommendations..." />
+              <LoadingSpinner size="md" message={t('common.loading', 'Loading historical recommendations...')} />
             </div>
           )}
 
@@ -457,16 +458,16 @@ const CropRecommendationPage = () => {
             <div className="py-12 px-6 bg-white rounded-3xl border border-slate-200/80 text-center max-w-md mx-auto">
               <History className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <h3 className="text-base font-bold text-slate-800">
-                No previous crop recommendations found.
+                {t('cropReco.emptyHistory', 'No previous crop recommendations found.')}
               </h3>
               <p className="text-xs text-slate-500 mt-1 mb-4">
-                Select a farm plot and run a recommendation to see your saved records here.
+                {t('cropReco.subtitle', 'Select a farm plot and run a recommendation to see your saved records here.')}
               </p>
               <button
                 onClick={() => setActiveTab('get')}
                 className="inline-flex items-center space-x-2 px-4 py-2 bg-agri-600 hover:bg-agri-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
               >
-                <span>Get Recommendation</span>
+                <span>{t('cropReco.evaluateBtn', 'Get Recommendation')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -478,14 +479,14 @@ const CropRecommendationPage = () => {
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Stored Records ({historyItems.length})
+                    {t('cropReco.historyTitle', 'Stored Records')} ({historyItems.length})
                   </span>
                   <Badge variant="primary" className="text-[10px]">
                     PostgreSQL
                   </Badge>
                 </div>
                 <span className="text-xs text-slate-400">
-                  Sorted by most recent
+                  {t('common.date', 'Date')}
                 </span>
               </div>
 
@@ -493,12 +494,12 @@ const CropRecommendationPage = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th className="py-3.5 px-5">Date &amp; Time</th>
-                      <th className="py-3.5 px-5">Farm</th>
-                      <th className="py-3.5 px-5">Recommended Crop</th>
-                      <th className="py-3.5 px-5">Match Confidence</th>
-                      <th className="py-3.5 px-5">Soil Context</th>
-                      <th className="py-3.5 px-5 text-right">Actions</th>
+                      <th className="py-3.5 px-5">{t('common.date', 'Date & Time')}</th>
+                      <th className="py-3.5 px-5">{t('nav.myFarms', 'Farm')}</th>
+                      <th className="py-3.5 px-5">{t('cropReco.title', 'Recommended Crop')}</th>
+                      <th className="py-3.5 px-5">{t('cropReco.confidenceScore', 'Match Confidence')}</th>
+                      <th className="py-3.5 px-5">{t('cropReco.soilSuitabilityTitle', 'Soil Context')}</th>
+                      <th className="py-3.5 px-5 text-right">{t('common.actions', 'Actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -511,18 +512,18 @@ const CropRecommendationPage = () => {
                               {formatDateTime(item.generated_at)}
                             </div>
                             <div className="text-[11px] text-slate-400">
-                              Reco #{item.reco_id}
+                              #{item.reco_id}
                             </div>
                           </td>
 
                           <td className="py-4 px-5 whitespace-nowrap">
                             <div className="font-bold text-slate-800 flex items-center space-x-1.5">
                               <Tractor className="w-3.5 h-3.5 text-agri-600" />
-                              <span>Farm #{item.farm_id}</span>
+                              <span>{t('nav.myFarms', 'Farm')} #{item.farm_id}</span>
                             </div>
                             {item.farm_area_acres && (
                               <div className="text-[11px] text-slate-500">
-                                {item.farm_area_acres} Acres
+                                {item.farm_area_acres} {t('common.acres', 'Acres')}
                               </div>
                             )}
                           </td>
@@ -575,7 +576,7 @@ const CropRecommendationPage = () => {
                               </div>
                             ) : (
                               <span className="text-slate-400 text-[11px] italic">
-                                No soil recorded
+                                {t('farms.noSoilData', 'No soil recorded')}
                               </span>
                             )}
                           </td>
@@ -586,14 +587,14 @@ const CropRecommendationPage = () => {
                                 to="/market-prices"
                                 className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg transition"
                               >
-                                Prices
+                                {t('dashboard.viewPricesAction', 'Prices')}
                               </Link>
                               <Link
                                 to="/price-prediction"
                                 className="px-2.5 py-1.5 bg-agri-50 hover:bg-agri-100 text-agri-700 text-[11px] font-semibold rounded-lg transition flex items-center space-x-1"
                               >
                                 <TrendingUp className="w-3 h-3" />
-                                <span>Forecast</span>
+                                <span>{t('nav.pricePrediction', 'Forecast')}</span>
                               </Link>
                             </div>
                           </td>

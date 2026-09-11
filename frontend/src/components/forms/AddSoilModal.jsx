@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
 import { farmService } from '../../services/farmService';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     ph: '',
     nitrogen: '',
@@ -58,7 +60,7 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Record Soil Data Reading">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('addSoil.modalTitle', 'Record Soil Health Test')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl flex items-center space-x-2">
@@ -68,13 +70,13 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
         )}
 
         <p className="text-xs text-slate-500">
-          Soil readings are utilized by the AI Crop Recommendation engine to determine the most suitable crops for your farm.
+          {t('addSoil.modalDesc', 'Enter laboratory or Soil Health Card measurements for this farm.')}
         </p>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Soil pH (0 - 14)
+              {t('addSoil.phLabel', 'Soil pH Level (0 - 14)')}
             </label>
             <input
               type="number"
@@ -89,7 +91,7 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Moisture (%)
+              {t('addSoil.moistureLabel', 'Soil Moisture Content (%)')}
             </label>
             <input
               type="number"
@@ -107,7 +109,7 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Nitrogen (N)
+              {t('addSoil.nLabel', 'Available Nitrogen (N in kg/ha)')}
             </label>
             <input
               type="number"
@@ -121,7 +123,7 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Phosphorus (P)
+              {t('addSoil.pLabel', 'Available Phosphorus (P in kg/ha)')}
             </label>
             <input
               type="number"
@@ -135,7 +137,7 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Potassium (K)
+              {t('addSoil.kLabel', 'Available Potassium (K in kg/ha)')}
             </label>
             <input
               type="number"
@@ -151,14 +153,14 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
 
         <div>
           <label className="block text-xs font-medium text-slate-700 mb-1">
-            Soil Type
+            {t('addSoil.soilTypeLabel', 'Soil Classification / Type')}
           </label>
           <select
             value={formData.soil_type}
             onChange={(e) => setFormData({ ...formData, soil_type: e.target.value })}
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-agri-500 bg-white"
           >
-            <option value="">Select Soil Type (Optional)</option>
+            <option value="">{t('common.selectOption', 'Select Soil Type (Optional)')}</option>
             <option value="Loamy">Loamy Soil</option>
             <option value="Clay">Clay Soil</option>
             <option value="Sandy">Sandy Soil</option>
@@ -174,7 +176,7 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </button>
           <button
             type="submit"
@@ -182,7 +184,7 @@ const AddSoilModal = ({ isOpen, onClose, farmId, onSoilAdded }) => {
             className="inline-flex items-center space-x-2 px-5 py-2 text-sm font-semibold bg-agri-600 hover:bg-agri-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            <span>{submitting ? 'Recording...' : 'Save Soil Reading'}</span>
+            <span>{submitting ? t('addSoil.submitting', 'Saving Soil Data...') : t('common.save', 'Save Soil Reading')}</span>
           </button>
         </div>
       </form>

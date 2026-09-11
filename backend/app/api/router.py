@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import auth, catalog, farms, market, notifications, recommend, weather
+from app.api.routes import assistant, auth, catalog, farms, market, notifications, recommend, weather
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -12,3 +12,4 @@ api_router.include_router(catalog.markets_router)
 api_router.include_router(recommend.router)
 api_router.include_router(recommend.recommendations_router)
 api_router.include_router(notifications.router)
+api_router.include_router(assistant.router)

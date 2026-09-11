@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from '../i18n/LanguageContext';
 import { catalogService } from '../services/catalogService';
 import { marketService } from '../services/marketService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -19,6 +20,7 @@ import {
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const MarketPricesPage = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
 
   const [crops, setCrops] = useState([]);
@@ -133,19 +135,18 @@ const MarketPricesPage = () => {
       <div>
         <div className="inline-flex items-center space-x-2 text-xs font-semibold text-agri-700 bg-agri-50 px-3 py-1 rounded-full border border-agri-200 mb-2">
           <Store className="w-3.5 h-3.5 text-agri-600" />
-          <span>Real-time Agmarknet Gateway</span>
+          <span>{t('market.liveBadge', 'Official Agmarknet Live')}</span>
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Live Mandi Market Prices
+          {t('market.title', 'Live Mandi Prices & Arrivals')}
         </h1>
         <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-          Track official Government of India APMC mandi modal rates with automated local database
-          caching and fallback.
+          {t('market.subtitle', 'Track official Government Agmarknet prices across APMC mandis and compare rates.')}
         </p>
       </div>
 
       {loadingCatalog ? (
-        <LoadingSpinner message="Loading commodity catalog &amp; markets..." />
+        <LoadingSpinner message={t('common.loading', 'Loading commodity catalog & markets...')} />
       ) : (
         <div className="space-y-6">
           {/* Filters Bar */}
@@ -153,7 +154,7 @@ const MarketPricesPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Select Commodity
+                  {t('market.commodityLabel', 'Commodity')}
                 </label>
                 <select
                   value={selectedCropId}
@@ -170,7 +171,7 @@ const MarketPricesPage = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Select Mandi Market
+                  {t('market.marketLabel', 'Mandi Market')}
                 </label>
                 <select
                   value={selectedMarketId}
@@ -196,7 +197,7 @@ const MarketPricesPage = () => {
                   ) : (
                     <Search className="w-4 h-4" />
                   )}
-                  <span>{loadingPrices ? 'Querying Mandi...' : 'Search Mandi Price'}</span>
+                  <span>{loadingPrices ? t('common.loading', 'Querying Mandi...') : t('market.searchBtn', 'Fetch Latest Price')}</span>
                 </button>
               </div>
             </div>
@@ -209,7 +210,7 @@ const MarketPricesPage = () => {
             <div className="py-12 bg-white rounded-3xl border border-slate-200/80">
               <LoadingSpinner
                 size="lg"
-                message="Connecting to data.gov.in Agmarknet gateway &amp; verifying cache..."
+                message={t('common.loading', 'Connecting to data.gov.in Agmarknet gateway & verifying cache...')}
               />
             </div>
           )}
@@ -230,17 +231,17 @@ const MarketPricesPage = () => {
                     <div>
                       <div className="flex items-center space-x-3">
                         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                          {itemCrop?.name || selectedCrop?.name || 'Commodity'} Rates
+                          {itemCrop?.name || selectedCrop?.name || 'Commodity'} {t('market.title', 'Rates')}
                         </h2>
                         {price.cached ? (
                           <Badge variant="neutral" className="flex items-center space-x-1">
                             <Database className="w-3 h-3" />
-                            <span>PostgreSQL Cached Record</span>
+                            <span>{t('market.cachedBadge', 'Archived Database Record')}</span>
                           </Badge>
                         ) : (
                           <Badge variant="success" className="flex items-center space-x-1">
                             <Radio className="w-3 h-3 animate-pulse text-emerald-600" />
-                            <span>Live Mandi Arrival (data.gov.in)</span>
+                            <span>{t('market.liveBadge', 'Official Agmarknet Live')}</span>
                           </Badge>
                         )}
                       </div>
@@ -253,7 +254,7 @@ const MarketPricesPage = () => {
                         </span>
                         <span>•</span>
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Arrival Date: {formatDate(price.date)}</span>
+                        <span>{t('market.arrivalDate', 'Arrival Date')}: {formatDate(price.date)}</span>
                       </p>
                     </div>
 
@@ -263,7 +264,7 @@ const MarketPricesPage = () => {
                         className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition"
                       >
                         <TrendingUp className="w-4 h-4" />
-                        <span>Predict Price</span>
+                        <span>{t('nav.pricePrediction', 'Predict Price')}</span>
                       </Link>
 
                       <Link
@@ -271,7 +272,7 @@ const MarketPricesPage = () => {
                         className="inline-flex items-center space-x-1.5 px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-xl transition"
                       >
                         <Scale className="w-4 h-4" />
-                        <span>Compare MSP</span>
+                        <span>{t('nav.mspComparison', 'Compare MSP')}</span>
                       </Link>
                     </div>
                   </div>
@@ -281,35 +282,35 @@ const MarketPricesPage = () => {
                     {/* Modal Price */}
                     <div className="p-6 bg-gradient-to-br from-agri-50 to-emerald-50/60 border border-agri-200/80 rounded-2xl shadow-xs">
                       <div className="flex items-center justify-between text-xs font-bold text-agri-800 uppercase tracking-wider mb-2">
-                        <span>Modal Price (Most Traded)</span>
-                        <Badge variant="primary">Benchmark</Badge>
+                        <span>{t('market.currentModalPrice', 'Actual Market Modal Price')}</span>
+                        <Badge variant="primary">{t('msp.benchmarkBadge', 'Benchmark')}</Badge>
                       </div>
                       <div className="text-3xl font-extrabold text-agri-900 tracking-tight">
                         {formatCurrency(price.modal_price)}
                       </div>
-                      <span className="text-xs text-agri-700 mt-1 block">per Quintal (100 kg)</span>
+                      <span className="text-xs text-agri-700 mt-1 block">{t('market.perQuintal', 'per Quintal (100 kg)')}</span>
                     </div>
 
                     {/* Minimum Price */}
                     <div className="p-6 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                        Minimum Arrival Price
+                        {t('market.minPrice', 'Minimum Price')}
                       </span>
                       <div className="text-3xl font-extrabold text-slate-800 tracking-tight">
                         {formatCurrency(price.min_price)}
                       </div>
-                      <span className="text-xs text-slate-500 mt-1 block">per Quintal</span>
+                      <span className="text-xs text-slate-500 mt-1 block">{t('market.perQuintal', 'per Quintal')}</span>
                     </div>
 
                     {/* Maximum Price */}
                     <div className="p-6 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                        Maximum Arrival Price
+                        {t('market.maxPrice', 'Maximum Price')}
                       </span>
                       <div className="text-3xl font-extrabold text-slate-800 tracking-tight">
                         {formatCurrency(price.max_price)}
                       </div>
-                      <span className="text-xs text-slate-500 mt-1 block">per Quintal</span>
+                      <span className="text-xs text-slate-500 mt-1 block">{t('market.perQuintal', 'per Quintal')}</span>
                     </div>
                   </div>
                 </div>
